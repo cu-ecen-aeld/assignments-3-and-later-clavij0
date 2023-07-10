@@ -1,7 +1,9 @@
 #include "systemcalls.h"
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
 
@@ -84,6 +86,7 @@ bool do_exec(int count, ...)
         if ( ck == -1 ){;//remaining argument
             perror("Error ocurre while processing command :");
             exit(EXIT_FAILURE);
+            return false;
         }else{
             pid_t cpid = waitpid(pid, &stat, 0);
             if(WIFEXITED(stat)){
@@ -91,7 +94,7 @@ bool do_exec(int count, ...)
                 printf("Child %d terminated with status %d\n", cpid, WEXITSTATUS(stat));
                 return true;
             }else if (WIFSIGNALED(stat)){
-                printf("Child %d terminated by SIGNAL with status %d\n", cpid, WEXITSTATUS(stat));
+                printf("Child %d terminated by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
                 return false;
             }
         }        
@@ -113,7 +116,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     va_list args;
     va_start(args, count);
     char * command[count+1];
-    int i;
+    int i, stat;
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
@@ -124,6 +127,9 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     command[count] = command[count];
 
 
+
+
+
 /*
  * TODO
  *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
@@ -131,7 +137,36 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+    int kidpid;
+    int fd = open(outputfile, O_CREAT|O_WRONLY|O_TRUNC, 0644);
+    if (fd < 0) { 
+        perror("open"); 
+        abort(); 
+        }
 
+    switch (kidpid = fork()){
+        case -1:
+            perror("Error fork :");
+            return false;
+        case 0:
+            if (dup2(fd, 1) < 0) {  //man dup2 Chage the fd setted by user
+                perror("dup2"); 
+                abort(); 
+                }
+            close(fd);
+            execvp(command[0], command);
+            exit(EXIT_FAILURE);
+        default:
+            pid_t cpid = waitpid(kidpid, &stat, 0);
+            if(WIFEXITED(stat)){
+                printf("Sikerül!!");
+                printf("Child %d terminated with status %d\n", cpid, WEXITSTATUS(stat));
+                return true;
+            }else if (WIFSIGNALED(stat)){
+                printf("Child %d terminated by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
+                return false;
+            }
+    }
     va_end(args);
 
     return true;
