@@ -1,4 +1,12 @@
 #include "systemcalls.h"
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <errno.h>
+#include <stdlib.h>
+
+
+//#define EXIT_FAILURE -1
 
 /**
  * @param cmd the command to execute with system()
@@ -16,8 +24,15 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+    int rc = system(cmd);
+    if (rc == -1){
+        perror("perror -> ");
+        return false;
+    }else{
+        return true;
+    }
 
-    return true;
+   //return true;
 }
 
 /**
@@ -39,7 +54,7 @@ bool do_exec(int count, ...)
     va_list args;
     va_start(args, count);
     char * command[count+1];
-    int i;
+    int i, stat;
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
@@ -58,7 +73,31 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    pid_t pid = fork();
 
+    if(pid == -1){
+        //Not child process1
+        perror("Error : ");
+        return false;
+    }else{
+        int ck = execv(command[0],command);
+        if ( ck == -1 ){;//remaining argument
+            perror("Error ocurre while processing command :");
+            exit(EXIT_FAILURE);
+        }else{
+            pid_t cpid = waitpid(pid, &stat, 0);
+            if(WIFEXITED(stat)){
+                printf("Sikerül!!");
+                printf("Child %d terminated with status %d\n", cpid, WEXITSTATUS(stat));
+                return true;
+            }else if (WIFSIGNALED(stat)){
+                printf("Child %d terminated by SIGNAL with status %d\n", cpid, WEXITSTATUS(stat));
+                return false;
+            }
+        }        
+        
+    }
+    
     va_end(args);
 
     return true;
