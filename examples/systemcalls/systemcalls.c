@@ -163,13 +163,14 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
             execvp(command[0], command);
             exit(EXIT_FAILURE);
         default:
-            pid_t cpid = waitpid(kidpid, &stat, 0);
+            //pid_t cpid = waitpid(kidpid, &stat, 0);
+            waitpid(kidpid, &stat, 0);
             if(WIFEXITED(stat)){
                 printf("Sikerül!!");
-                printf("Child %d terminated-2 with status %d\n", cpid, WEXITSTATUS(stat));
+            //    printf("Child %d terminated-2 with status %d\n", cpid, WEXITSTATUS(stat));
                 return true;
             }else if (WIFSIGNALED(stat)){
-                printf("Child %d terminated-2 by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
+                //printf("Child %d terminated-2 by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
                 return false;
             }
     }
