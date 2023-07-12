@@ -84,7 +84,7 @@ bool do_exec(int count, ...)
         pid_t pid = fork();
 
         if(pid == -1){
-            perror("Error : ");
+            perror("Error  fork: ");
             return false;
         }else if(pid==0){
             //int ck = execv(command[0],command);
@@ -95,23 +95,23 @@ bool do_exec(int count, ...)
             //}
         }
        
-        //pid_t cpid = waitpid(pid, &stat, 0);
-        if (waitpid(pid, &stat, 0) == -1 ){
+        pid_t cpid = waitpid(pid, &stat, 0);
+        if (cpid == -1 ){
             perror("WAITPID Error ocurre while processing command :");
             return false;
         }
          if(WIFEXITED(stat) && WEXITSTATUS(stat) == 0){
                 printf("Sikerül-1!!\n");
-          //      printf("Child %d terminated-1 with status %d\n", cpid, WEXITSTATUS(stat));
+                printf("Child %d terminated-1 with status %d\n", cpid, WEXITSTATUS(stat));
                 return true;
-            // }else if (WIFSIGNALED(stat)){
-            //     printf("Child %d terminated-1 by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
-            //     return false;
-        }else{
-
+         }else{
             return false;
         }
-        
+
+        if (WIFSIGNALED(stat)){
+                 printf("Child %d terminated-1 by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
+                 return false;
+        }
     return false;
 }
 
