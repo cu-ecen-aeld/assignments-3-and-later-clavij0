@@ -96,16 +96,16 @@ bool do_exec(int count, ...)
             //}
         }
        
-        pid_t cpid = waitpid(pid, &stat, 0);
-        if (cpid == -1 ){
+        //pid_t cpid = waitpid(pid, &stat, 0);
+        if (waitpid(pid, &stat, 0) == -1 ){
             perror("WAITPID Error ocurre while processing command :");
             return false;
         }else if(WIFEXITED(stat)){
                 printf("Sikerül-1!!\n");
-                printf("Child %d terminated-1 with status %d\n", cpid, WEXITSTATUS(stat));
+          //      printf("Child %d terminated-1 with status %d\n", cpid, WEXITSTATUS(stat));
                 return WEXITSTATUS(stat) == 0;
              }else if (WIFSIGNALED(stat)){
-                 printf("Child %d terminated-1 by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
+            //     printf("Child %d terminated-1 by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
                  return false;
             }
         
