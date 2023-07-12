@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <string.h>
+
 
 
 
@@ -36,7 +36,7 @@ bool do_system(const char *cmd)
         return true;
     }
 
-   return true;
+   //return true;
 }
 
 /**
@@ -77,46 +77,38 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
-    const char *path = command[0];
-    
-    // if(strchr(path,'/') != NULL)
-    //     return false;
-    // else
-    //     return false;
-    if (path[0] == '/'){
+    va_end(args);
+
+ 
         fflush(stdout);
         pid_t pid = fork();
+
         if(pid == -1){
-            //Not child process1
             perror("Error : ");
             return false;
         }else if(pid==0){
-            int ck = execv(command[0],command);
-            if ( ck == -1 ){;//remaining argument
-                perror("Error ocurre while processing command :\n");
-                //exit(EXIT_FAILURE);
+            //int ck = execv(command[0],command);
+            execv(command[0],command);
+            //if ( ck == -1 || ck < 0){//remaining argument
+                perror("EXECV Error ocurre while processing command :");
                 return false;
-            }else if (ck>0){
-                pid_t cpid = waitpid(pid, &stat, 0);
-                if(WIFEXITED(stat)){
-                    printf("Sikerül-2!!\n");
-                    printf("Child %d terminated with status %d\n", cpid, WEXITSTATUS(stat));
-                    return true;
-                }else if (WIFSIGNALED(stat)){
-                    printf("Child %d terminated by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
-                    return false;
-                }
-            }        
-            
+                exit(EXIT_FAILURE);
+            //}
         }
-    }else if (path[0] != '/'){
-         printf("Character %c \n",path[0]);
-         //exit(EXIT_FAILURE);
-         va_end(args);
-         return false;
-    }
-    va_end(args);
-
+       
+        pid_t cpid = waitpid(pid, &stat, 0);
+        if (cpid == -1 ){
+            perror("WAITPID Error ocurre while processing command :");
+            return false;
+        }else if(WIFEXITED(stat)){
+                printf("Sikerül-1!!\n");
+                printf("Child %d terminated-1 with status %d\n", cpid, WEXITSTATUS(stat));
+                return WEXITSTATUS(stat) == 0;
+             }else if (WIFSIGNALED(stat)){
+                 printf("Child %d terminated-1 by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
+                 return false;
+            }
+        
     return true;
 }
 
@@ -174,10 +166,10 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
             pid_t cpid = waitpid(kidpid, &stat, 0);
             if(WIFEXITED(stat)){
                 printf("Sikerül!!");
-                printf("Child %d terminated with status %d\n", cpid, WEXITSTATUS(stat));
+                printf("Child %d terminated-2 with status %d\n", cpid, WEXITSTATUS(stat));
                 return true;
             }else if (WIFSIGNALED(stat)){
-                printf("Child %d terminated by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
+                printf("Child %d terminated-2 by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
                 return false;
             }
     }
