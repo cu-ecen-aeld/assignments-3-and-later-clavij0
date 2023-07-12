@@ -91,7 +91,6 @@ bool do_exec(int count, ...)
             execv(command[0],command);
             //if ( ck == -1 || ck < 0){//remaining argument
                 perror("EXECV Error ocurre while processing command :");
-                return false;
                 exit(EXIT_FAILURE);
             //}
         }
@@ -100,16 +99,20 @@ bool do_exec(int count, ...)
         if (waitpid(pid, &stat, 0) == -1 ){
             perror("WAITPID Error ocurre while processing command :");
             return false;
-        }else if(WIFEXITED(stat)){
+        }
+         if(WIFEXITED(stat) && WEXITSTATUS(stat) == 0){
                 printf("Sikerül-1!!\n");
           //      printf("Child %d terminated-1 with status %d\n", cpid, WEXITSTATUS(stat));
-                return WEXITSTATUS(stat) == 0;
-             }else if (WIFSIGNALED(stat)){
+                return true;
+            // }else if (WIFSIGNALED(stat)){
             //     printf("Child %d terminated-1 by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
-                 return false;
-            }
+            //     return false;
+        }else{
+
+            return false;
+        }
         
-    return true;
+    return false;
 }
 
 /**
@@ -163,7 +166,6 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
             execvp(command[0], command);
             exit(EXIT_FAILURE);
         default:
-            //pid_t cpid = waitpid(kidpid, &stat, 0);
             waitpid(kidpid, &stat, 0);
             if(WIFEXITED(stat)){
                 printf("Sikerül!!");
