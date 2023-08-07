@@ -2,7 +2,7 @@
 #rm -f $(TARGET) $(SRC)
 
 
-CROSS_COMPILE = 
+CROSS_COMPILE = aarch64-none-linux-gnu-
 CC = gcc
 TARGET := writer
 

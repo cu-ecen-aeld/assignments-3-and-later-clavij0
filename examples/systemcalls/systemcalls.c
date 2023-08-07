@@ -110,6 +110,7 @@ bool do_exec(int count, ...)
 
         if (WIFSIGNALED(stat)){
                  printf("Child %d terminated-1 by SIGNAL with status # %d\n", cpid, WTERMSIG(stat));
+                 //psignal()
                  return false;
         }
     return false;
