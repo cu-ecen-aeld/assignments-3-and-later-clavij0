@@ -107,10 +107,11 @@ ${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
 # TODO: Add library dependencies to rootfs -> Place the lib in /lib64
 echo "TODO: Add library dependencies to rootfss"
 #cd ~/Documents/Coursera/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib
-cp -rL "/home/clavijo/Documents/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib/ld-linux-aarch64.so.1" ${OUTDIR}/rootfs/lib/
-cp -rL /home/clavijo/Documents/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libm.so.6 ${OUTDIR}/rootfs/lib64/
-cp -rL /home/clavijo/Documents/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libresolv.so.2 ${OUTDIR}/rootfs/lib64/
-cp -rL /home/clavijo/Documents/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libc.so.6 ${OUTDIR}/rootfs/lib64/
+pwd
+#cp -rL "/home/clavijo/Documents/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib/ld-linux-aarch64.so.1" ${OUTDIR}/rootfs/lib/
+#cp -rL /home/clavijo/Documents/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libm.so.6 ${OUTDIR}/rootfs/lib64/
+#cp -rL /home/clavijo/Documents/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libresolv.so.2 ${OUTDIR}/rootfs/lib64/
+#cp -rL /home/clavijo/Documents/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libc.so.6 ${OUTDIR}/rootfs/lib64/
 
 #cp ${COMPILER_DIR}/../aarch64-none-linux-gnu/libc/lib64/* ${OUTDIR}/rootfs/lib64/
 #cp ${COMPILER_DIR}/../aarch64-none-linux-gnu/libc/lib/* ${OUTDIR}/rootfs/lib/
@@ -118,6 +119,23 @@ cp -rL /home/clavijo/Documents/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aa
 #cp -a ~/Documents/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libm.so.6 ${OUTDIR}/rootfs/lib
 #cp -a ~/Documents/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libresolv.so.2 ${OUTDIR}/rootfs/lib
 #cp -a ~/Documents/arm-cross-compiler/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libc.so.6 ${OUTDIR}/rootfs/lib
+
+toolchain_sysroot=$(${CROSS_COMPILE}gcc -print-sysroot)
+echo "${toolchain_sysroot}"
+prg_intp_path=$(find ${toolchain_sysroot} -name ld-linux-aarch64.so.1)
+echo "${prg_intp_path}"
+lib_path1=$(find ${toolchain_sysroot} -name libm.so.6 )
+echo "${lib_path1}"
+lib_path2=$(find ${toolchain_sysroot} -name  libresolv.so.2)
+echo "${lib_path2}"
+lib_path3=$(find ${toolchain_sysroot} -name  libc.so.6)
+echo "${lib_path3}"
+
+cp ${prg_intp_path} ${OUTDIR}/rootfs/lib
+cp ${lib_path1} ${OUTDIR}/rootfs/lib64 
+cp ${lib_path2} ${OUTDIR}/rootfs/lib64
+cp ${lib_path3} ${OUTDIR}/rootfs/lib64
+
 
 # TODO: Make device nodes
 echo "TODO: Make device nodes"
