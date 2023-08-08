@@ -144,20 +144,28 @@ sudo mknod -m 666 ${OUTDIR}/rootfs/dev/null c 1 3
 
 # TODO: Clean and build the writer utility
 echo "TODO: Clean and build the writer utility"
-cd ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/
+#cd ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/
+cd ${FINDER_APP_DIR}
+echo " FINDER_APP_DIR ${FINDER_APP_DIR}"
 make
 
 # TODO: Copy the finder related scripts and executables to the /home directory
 # on the target rootfs
 echo "TODO: Copy the finder related scripts and executables to the /home directory \n on the target rootfs"
-cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/writer ${OUTDIR}/rootfs/home
-cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/finder.sh ${OUTDIR}/rootfs/home
+#cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/writer ${OUTDIR}/rootfs/home
+cp ${FINDER_APP_DIR}/writer ${OUTDIR}/rootfs/home
+#cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/finder.sh ${OUTDIR}/rootfs/home
+cp ${FINDER_APP_DIR}/finder.sh ${OUTDIR}/rootfs/home
 #cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/conf/username.txt ${OUTDIR}/rootfs/home
-mkdir ${OUTDIR}/rootfs/home/conf
-cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/conf/username.txt ${OUTDIR}/rootfs/home/conf
-cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/conf/assignment.txt ${OUTDIR}/rootfs/home/conf
-cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/finder-test.sh ${OUTDIR}/rootfs/home
-cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/autorun-qemu.sh ${OUTDIR}/rootfs/home
+cp -r ${FINDER_APP_DIR}/conf/ ${OUTDIR}/rootfs/home
+cp ${FINDER_APP_DIR}/finder-test.sh ${OUTDIR}/rootfs/home
+cp ${FINDER_APP_DIR}/autorun-qemu.sh ${OUTDIR}/rootfs/home
+
+# mkdir ${OUTDIR}/rootfs/home/conf
+# cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/conf/username.txt ${OUTDIR}/rootfs/home/conf
+# cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/conf/assignment.txt ${OUTDIR}/rootfs/home/conf
+# cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/finder-test.sh ${OUTDIR}/rootfs/home
+# cp ~/Documents/Coursera/LinuxSPIBuildroot/finder-app/autorun-qemu.sh ${OUTDIR}/rootfs/home
 
 # TODO: Chown the root directory
 echo "TODO: Chown the root directory"
