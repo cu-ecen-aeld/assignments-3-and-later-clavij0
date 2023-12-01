@@ -8,7 +8,9 @@ set -u
 NUMFILES=10
 WRITESTR=AELD_IS_FUN
 WRITEDIR=/tmp/aeld-data
+#WRITEDIR=/tmp/assignment4-result.txt
 username=$(cat conf/username.txt)
+FINDER_APP_DIR=$(realpath $(dirname $0))
 #echo "Before code ${username}"
 
 if [ $# -lt 3 ]
@@ -23,7 +25,8 @@ then
 else
 	NUMFILES=$1
 	WRITESTR=$2
-	WRITEDIR=/tmp/aeld-data/$3
+	#WRITEDIR=/tmp/aeld-data/$3
+	WRITEDIR=/tmp/assignment4-result.txt
 fi
 
 MATCHSTR="The number of files are ${NUMFILES} and the number of matching lines are ${NUMFILES}"
@@ -56,14 +59,18 @@ fi
 
 for i in $( seq 1 $NUMFILES)
 do
-	./writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"
+	#./writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"
+	$(FINDER_APP_DIR)/write "$WRITEDIR/${username}$i.txt" "$WRITESTR"
 done
 #pwd
 #echo " WRITEDIR ${WRITEDIR} WRITESTR ${WRITESTR}"
-OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
+#OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
+OUTPUTSTRING=$($(FINDER_APP_DIR)/finder.sh "$WRITEDIR" "$WRITESTR") #/assignment4.2
 
 # remove temporary directories
-rm -rf /tmp/aeld-data
+#rm -rf /tmp/aeld-data
+rm -rf /tmp/assignment4-result.txt #assigment4.2
+
 
 set +e
 echo ${OUTPUTSTRING} | grep "${MATCHSTR}"

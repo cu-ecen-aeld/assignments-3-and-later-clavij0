@@ -19,13 +19,13 @@ void* threadfunc(void* thread_param)
     struct thread_data* thread_func_args = (struct thread_data *) thread_param;
     //thread_func_args->thread_complete_success = false; //by default from the struct in the .h file the bool->true so  must be change to false
 
-    sleep((double)thread_func_args->wait_to_obtain_ms/1000);
+    sleep(thread_func_args->wait_to_obtain_ms/1000);
 
     if(pthread_mutex_lock(thread_func_args->mutex) != 0){
         perror("Unable to lock pthread_mutex");
     }
     //time to realese thread
-    sleep((double)thread_func_args->wait_to_release_ms/1000);
+    sleep(thread_func_args->wait_to_release_ms/1000);
     
     if(pthread_mutex_unlock(thread_func_args->mutex) != 0){
         perror("Unable to unlock pthread_mutex");
