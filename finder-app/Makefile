@@ -2,12 +2,13 @@
 #rm -f $(TARGET) $(SRC)
 
 
-CROSS_COMPILE = aarch64-none-linux-gnu-
+#CROSS_COMPILE = aarch64-none-linux-gnu-
+CROSS_COMPILE = arch64-buildroot-linux-gnu- 
 CC = gcc
 TARGET := writer
-
+echo ($)
 all: writer.c
-ifeq ($(CROSS_COMPILE), aarch64-none-linux-gnu-)
+ifeq ($(CROSS_COMPILE), arch64-buildroot-linux-gnu-)
 	echo "foo equals ok"
 	$(CROSS_COMPILE)$(CC) writer.c -o $(TARGET) 
 else
