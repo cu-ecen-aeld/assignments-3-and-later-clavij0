@@ -6,7 +6,7 @@
 CROSS_COMPILE = arch64-buildroot-linux-gnu- 
 CC = gcc
 TARGET := writer
-echo ($)
+
 all: writer.c
 ifeq ($(CROSS_COMPILE), arch64-buildroot-linux-gnu-)
 	echo "foo equals ok"
