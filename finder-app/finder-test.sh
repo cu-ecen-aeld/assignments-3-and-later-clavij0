@@ -27,7 +27,7 @@ else
 	NUMFILES=$1
 	WRITESTR=$2
 	#WRITEDIR=/tmp/aeld-data/$3
-	WRITEDIR=/tmp/assignment4-result.txt/$3
+	WRITEDIR=/tmp/assignment4-result.txt
 fi
 
 MATCHSTR="The number of files are ${NUMFILES} and the number of matching lines are ${NUMFILES}"
@@ -38,8 +38,8 @@ rm -rf "${WRITEDIR}"
 
 # create $WRITEDIR if not assignment1
 # pwd
-assignment=`cat conf/assignment.txt`
-#assignment=$(cat conf/assignment.txt)
+#assignment=`cat conf/assignment.txt`
+assignment=$(cat conf/assignment.txt)
 
 if [ $assignment != 'assignment1' ]
 then
