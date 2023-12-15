@@ -38,6 +38,7 @@ rm -rf "${WRITEDIR}"
 
 # create $WRITEDIR if not assignment1
 # pwd
+echo "FLAG ASSIGNMENT"
 echo $((realpath $(dirname $0)/conf/assignmsent.txt))
 assignment=`cat conf/assignment.txt`
 cat conf/assignment.txt
