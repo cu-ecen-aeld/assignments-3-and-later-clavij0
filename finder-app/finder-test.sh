@@ -38,11 +38,10 @@ rm -rf "${WRITEDIR}"
 
 # create $WRITEDIR if not assignment1
 # pwd
-cat conf/assignment.txt
-echo $(cat conf/assignmsent.txt)
+echo $((realpath $(dirname $0))/assignmsent.txt))
 assignment=`cat conf/assignment.txt`
 cat conf/assignment.txt
-echo $(cat conf/assignmsent.txt)
+
 #assignment=$(cat conf/assignmsent.txt)
 
 if [ $assignment != 'assignment1' ]
