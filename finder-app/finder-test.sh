@@ -38,8 +38,8 @@ rm -rf "${WRITEDIR}"
 
 # create $WRITEDIR if not assignment1
 # pwd
-#assignment=`cat conf/assignment.txt`
-assignment=$(cat conf/assignmsent.txt)
+assignment=`cat conf/assignment.txt`
+#assignment=$(cat conf/assignmsent.txt)
 
 if [ $assignment != 'assignment1' ]
 then
