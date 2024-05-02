@@ -39,11 +39,13 @@ rm -rf "${WRITEDIR}"
 # create $WRITEDIR if not assignment1
 # pwd
 echo "FLAG ASSIGNMENT"
+echo "MUNDO CRUEL"
 Directory=$(cd $(dirname $0) && pwd -P)
 echo $Directory
 #echo $((realpath $(dirname $0)))
 assignment=`cat $Directory/conf/assignment.txt`
-cat conf/assignment.txt
+#cat conf/assignment.txt
+echo $(assignment)
 
 #assignment=$(cat conf/assignmsent.txt)
 
