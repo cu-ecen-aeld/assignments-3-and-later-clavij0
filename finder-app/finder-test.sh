@@ -7,8 +7,8 @@ set -u
 
 NUMFILES=10
 WRITESTR=AELD_IS_FUN
-#WRITEDIR=/tmp/aeld-data
-WRITEDIR=/tmp/assignment4-result.txt
+WRITEDIR=/tmp/aeld-data
+#WRITEDIR=/tmp/assignment4-result.txt
 #username=$(cat conf/username.txt)
 username=$(whoami)
 FINDER_APP_DIR=$(realpath $(dirname $0))
@@ -16,77 +16,88 @@ FINDER_APP_DIR=$(realpath $(dirname $0))
 
 if [ $# -lt 3 ]
 then
-	echo "Using default value ${WRITESTR} for string to write"
-	if [ $# -lt 1 ]
-	then
-		echo "Using default value ${NUMFILES} for number of files to write"
-	else
-		NUMFILES=$1
-	fi	
+        echo "Using default value ${WRITESTR} for string to write"
+        if [ $# -lt 1 ]
+        then
+                echo "Using default value ${NUMFILES} for number of files to write"
+        else
+                NUMFILES=$1
+        fi
 else
-	NUMFILES=$1
-	WRITESTR=$2
-	#WRITEDIR=/tmp/aeld-data/$3
-	WRITEDIR=/tmp/assignment4-result.txt
+        NUMFILES=$1
+        WRITESTR=$2
+        WRITEDIR=/tmp/aeld-data/$3
+        #WRITEDIR=/tmp/assignment4-result.txt
 fi
 
 MATCHSTR="The number of files are ${NUMFILES} and the number of matching lines are ${NUMFILES}"
 
 echo "Writing ${NUMFILES} files containing string ${WRITESTR} to ${WRITEDIR}"
 
-rm -rf "${WRITEDIR}"
+rm -rf "${WRITEDIR}"                                                                           
+                                                                                               
+# create $WRITEDIR if not assignment1                                                          
+# pwd                                                                                          
+echo "FLAG ASSIGNMENT"                                                                         
+echo "MUNDO CRUEL"                                                                             
+Directory=$(cd $(dirname $0) && pwd -P)                                                        
+echo "----------Directory------------"                                                         
+echo $Directory                                                                                
+echo "----------Directory------------"                                                         
+                                                                                               
+#echo $((realpath $(dirname $0)))                                                              
+assignment=`cat $Directory/conf/assignment.txt`                                                
+#cat conf/assignment.txt                                                                       
+echo "----------assignment------------"                                                        
+echo $assignment                                                                               
+echo "----------assignment------------"                                                        
+                                                                                               
+#assignment=$(cat conf/assignmsent.txt)                                                        
+                                                                                               
+if [ $assignment != 'assignment1' ]                                                            
+then                                                                                           
+        mkdir -p "$WRITEDIR"                                                                   
+        #The WRITEDIR is in quotes because if the directory path consists of spaces, then variable substitution will consider it as multiple argu
+        #The quotes signify that the entire string in WRITEDIR is a single string.                                                               
+        #This issue can also be resolved by using double square brackets i.e [[ ]] instead of using quotes.                                      
+        if [ -d "$WRITEDIR" ]                                                                                                                    
+        then                                                                                                                                     
+                echo "$WRITEDIR created"                                                                                                         
+        else                                                                                                                                     
+                exit 1                                                                                                                           
+        fi                                                                                                                                       
+fi                                                                                                                                               
+#echo "Removing the old writer utility and compiling as a native application"                                                                    
+#make clean                                                                                                                                      
+#make                         
 
-# create $WRITEDIR if not assignment1
-# pwd
-echo "FLAG ASSIGNMENT"
-echo "MUNDO CRUEL"
-Directory=$(cd $(dirname $0) && pwd -P)
-echo $Directory
-#echo $((realpath $(dirname $0)))
-assignment=`cat $Directory/conf/assignment.txt`
-#cat conf/assignment.txt
-echo $(assignment)
-
-#assignment=$(cat conf/assignmsent.txt)
-
-if [ $assignment != 'assignment1' ]
-then
-	mkdir -p "$WRITEDIR"
-	#The WRITEDIR is in quotes because if the directory path consists of spaces, then variable substitution will consider it as multiple argument.
-	#The quotes signify that the entire string in WRITEDIR is a single string.
-	#This issue can also be resolved by using double square brackets i.e [[ ]] instead of using quotes.
-	if [ -d "$WRITEDIR" ]
-	then
-		echo "$WRITEDIR created"
-	else
-		exit 1
-	fi
-fi
-#echo "Removing the old writer utility and compiling as a native application"
-#make clean
-#make
-
-for i in $( seq 1 $NUMFILES)
-do
-	#./writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"
-	$(FINDER_APP_DIR)/write "$WRITEDIR/${username}$i.txt" "$WRITESTR"
-done
-#pwd
-#echo " WRITEDIR ${WRITEDIR} WRITESTR ${WRITESTR}"
-#OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
-OUTPUTSTRING=$($(FINDER_APP_DIR)/finder.sh "$WRITEDIR" "$WRITESTR") #/assignment4.2
-
-# remove temporary directories
-#rm -rf /tmp/aeld-data
-rm -rf /tmp/assignment4-result.txt #assigment4.2
+                                                                                                                                                 
+for i in $( seq 1 $NUMFILES)                                                                                                                     
+do                                                                                                                                               
+        #./writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"                                                                                      
+        echo $(pwd) "$i"                                                                                                                         
+        #echo $(FINDER_APP_DIR)                                                                                                                  
+        "$FINDER_APP_DIR/writer.sh" "$WRITEDIR/${username}$i.txt" "$WRITESTR"                                                                    
+done                                                                                                                                             
+#pwd                                                                                                                                             
+#echo " WRITEDIR ${WRITEDIR} WRITESTR ${WRITESTR}"                                                                                               
+#OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")                                                                                             
+OUTPUTSTRING=$("$FINDER_APP_DIR/finder.sh" "$WRITEDIR" "$WRITESTR") #/assignment4.2                                                              
+                                                                                                                                                 
+# remove temporary directories                                                                                                                   
+rm -rf /tmp/aeld-data                                                                                                                            
+#rm -rf /tmp/assignment4-result.txt #assigment4.2                                                                                                
+                                                                                                                                                 
+                                                                                                                                                 
+set +e                                                                                                                                           
+echo ${OUTPUTSTRING} | grep "${MATCHSTR}"                                                                                                        
+if [ $? -eq 0 ]; then                                                                                                                            
+        echo "success"                                                                                                                           
+        exit 0                                                                                                                                   
+else                                                                                                                                             
+        echo "failed: expected  ${MATCHSTR} in ${OUTPUTSTRING} but instead found"                                                                
+        exit 1                                                                                                                                   
+fi                                                                                                                                               
+     
 
 
-set +e
-echo ${OUTPUTSTRING} | grep "${MATCHSTR}"
-if [ $? -eq 0 ]; then
-	echo "success"
-	exit 0
-else
-	echo "failed: expected  ${MATCHSTR} in ${OUTPUTSTRING} but instead found"
-	exit 1
-fi

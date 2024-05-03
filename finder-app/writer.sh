@@ -1,4 +1,4 @@
-you
+#!/bin/sh
 
 if [ $# -ne 2 ]; 
 then
