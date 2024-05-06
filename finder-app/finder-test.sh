@@ -77,7 +77,7 @@ do
         #./writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"                                                                                      
         echo $(pwd) "$i"                                                                                                                         
         #echo $(FINDER_APP_DIR)                                                                                                                  
-        "$FINDER_APP_DIR/writer.sh" "$WRITEDIR/${username}$i.txt" "$WRITESTR"                                                                    
+        "$FINDER_APP_DIR/writer" "$WRITEDIR/${username}$i.txt" "$WRITESTR"                                                                    
 done                                                                                                                                             
 #pwd                                                                                                                                             
 #echo " WRITEDIR ${WRITEDIR} WRITESTR ${WRITESTR}"                                                                                               
@@ -85,7 +85,7 @@ done
 OUTPUTSTRING=$("$FINDER_APP_DIR/finder.sh" "$WRITEDIR" "$WRITESTR") #/assignment4.2                                                              
                                                                                                                                                  
 # remove temporary directories                                                                                                                   
-rm -rf /tmp/aeld-data                                                                                                                            
+# rm -rf /tmp/aeld-data                                                                                                                            
 #rm -rf /tmp/assignment4-result.txt #assigment4.2                                                                                                
                                                                                                                                                  
                                                                                                                                                  
