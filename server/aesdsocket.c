@@ -18,7 +18,7 @@
 #include <fcntl.h>
 #include <stdbool.h>
 
-#define PORT "9002"  // the port users will be connecting to
+#define PORT "9008"  // the port users will be connecting to
 
 #define BACKLOG 10   // how many pending connections queue will hold
 
@@ -30,6 +30,7 @@
 
 int sockett;
 FILE * fptr;
+int new_fd;
 
 /*
 Step
@@ -77,6 +78,7 @@ static void signal_handler ( int signal_number )
         close(sockett);
         fclose(fptr);
         remove(FILE_NAME);
+        closelog();
         exit(0);
     } else if ( signal_number == SIGTERM ) {
         //caught_sigterm = true;
@@ -84,9 +86,68 @@ static void signal_handler ( int signal_number )
         close(sockett);
         fclose(fptr);
         remove(FILE_NAME);
+        closelog();
         exit(0);
     }
     errno = errno_saved;
+}
+
+void parnert_handler(int new_fd, struct sockaddr_storage their_addr,  socklen_t addr_size){
+    char s[INET6_ADDRSTRLEN];
+    inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
+    syslog(LOG_INFO, "Accepted connection from %s", s);
+    printf("Accepted connection from %s \n", s);
+    // Receiving data
+    char buf[1024];
+    char *ptr;
+    int numbytes=0;
+
+    while(1){
+        
+        numbytes = recvfrom(new_fd, buf, MAXBUFLEN-1 , 0,(struct sockaddr *)&their_addr, &addr_size);
+
+        if (numbytes == -1){
+            syslog(LOG_ERR, "ERROR recv() failed-Closed connection from %s", s);
+            //perror("recv() failed");
+            break;
+        }else if(numbytes == 0){
+            //printf("wWHILE 2 - Closed connection from %s \n",s);
+            syslog(LOG_INFO, "Closed connection from %s", s);
+            close(new_fd);
+            break;
+        }
+          
+          
+        ptr = (char*)malloc(sizeof(char)*(MAXBUFLEN + 1));
+        // // Check if the memory has been successfully
+        // // allocated by malloc or not
+        if (ptr == NULL) {
+            printf("Memory not allocated.\n");
+            exit(0);
+        }
+        printf("numbytes %d\n", numbytes);
+        //buf[numbytes] = '\0';
+        memcpy(ptr,buf, numbytes);//dont forget to c&p the buf recv to the alloc memory
+        ptr[numbytes] = '\0';
+        //ptr=buf;
+        fputs(ptr,fptr);
+        
+        if(strchr(ptr,'\n')){
+            if(fseek(fptr,0,SEEK_SET)==0){
+                char file_buf[MAXBUFLEN];
+                int read_bytes;
+                while ((read_bytes = fread(file_buf, sizeof(char), sizeof file_buf,fptr)) > 0) {
+                    if (send(new_fd, file_buf,read_bytes, 0) == -1){
+                        syslog(LOG_ERR,"Send action failed");
+                        break;
+                    }
+                }
+            }else{
+                syslog(LOG_ERR,"fseek failed");
+            }
+        }
+        free(ptr);
+    }
 }
 
 int main (void){
@@ -96,7 +157,8 @@ int main (void){
     char ipstr[INET6_ADDRSTRLEN];
     char s[INET6_ADDRSTRLEN];
     //int sockett, new_fd, numbytes;
-    int new_fd, numbytes;
+    //int new_fd, numbytes;
+    int numbytes;
     socklen_t addr_size;
     int yes=1;
     void *addr;
@@ -104,6 +166,9 @@ int main (void){
     struct sockaddr_storage their_addr;
     struct sigaction sa;
     char buf[MAXBUFLEN];
+
+     // syslog
+    openlog("aesdsocket", LOG_PID | LOG_CONS, LOG_DAEMON);
 
     //Creamos la estructura para acomodar las conexiones
     memset(&hints,0,sizeof hints);
@@ -188,7 +253,6 @@ int main (void){
         //success = false;
     }
 
-
      // take this FD file and create outside in a function.
     int i;
     //FILE * fptr;
@@ -217,61 +281,29 @@ int main (void){
 
         inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
         printf("inet_ntop inside while %s: %s\n", ipver, ipstr);
-
-        for(;;){
         
-            if ((numbytes = recvfrom(new_fd, buf, MAXBUFLEN-1 , 0,
-                (struct sockaddr *)&their_addr, &addr_size)) == -1) {
-                perror("recvfrom");
-                exit(1);
-            }
 
-            printf("Accepted connection from %s\n ",ipstr);
-
-            printf("listener: got packet from %s\n",
-            inet_ntop(their_addr.ss_family,get_in_addr((struct sockaddr *)&their_addr),s, sizeof s));
-
-            printf("listener: packet is %d bytes long\n", numbytes);
-            buf[numbytes] = '\0';
-            //printf("listener: packet contains \"%s\"\n", buf);
-            printf("listener: packet contains %s", buf);
-            //ptr = (char*)malloc(MAXBUFLEN * sizeof(char));
-            ptr = (char*)malloc(numbytes + 1);
-            // Check if the memory has been successfully
-            // allocated by malloc or not
-            if (ptr == NULL) {
-                printf("Memory not allocated.\n");
-                exit(0);
-            }
-         
-            if (!fork()) { // this is the child process
-                close(sockett); // child doesn't need the listener
-                ptr=buf;     //Inside the child fork I must do the c&p text and send it back to the client.
-                fputs(ptr,fptr);
-                if(ptr,'\n'){
-                    if(fseek(fptr,0,SEEK_SET)==0){
-                        char file_buf[1024];
-                        int read_bytes;
-                        while ((read_bytes = fread(file_buf, sizeof(char), sizeof file_buf,fptr)) > 0) {
-                            //send(new_fd, file_buf, read_bytes, 0);
-                            if (send(new_fd, file_buf,read_bytes, 0) == -1)
-                                perror("send");
-                        }
-                        // if (send(new_fd, ptr,sizeof(ptr), 0) == -1)
-                        // perror("send");
-                    }
-                }
-                //printf("Longitud del array %d",strlen(ptr));
-                close(new_fd);
-                exit(0);
-            }
-
+          
+        if (!fork()) { // this is the child process
+            close(sockett); // child doesn't need the listener
+            //buf[numbytes] = '\0';
+            parnert_handler(new_fd, their_addr,addr_size);
+            
+            printf("parnert- Close connection\n");
+            close(new_fd);
+            exit(0);
         }
-        fclose(fptr);
-        close(sockett);
-        free(ptr);
+        
+        printf("3 - Close connection\n");
+        close(new_fd);      
+        
     }
-return  0;
 
+    printf("4 - Close connection from %s \n", s);
 
+    fclose(fptr);
+    close(sockett);
+    closelog();
+    
+   return  0;
 }
