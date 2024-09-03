@@ -350,7 +350,7 @@ int main (int argc, char *argv[]){
             parnert_handler(new_fd, their_addr,addr_size);
             
            // printf("parnert- Close connection\n");
-            freeaddrinfo(res); //Here must be close the res pointer
+            freeaddrinfo(res);//Here must be close the res pointer
             close(new_fd);
             exit(0);
         }
