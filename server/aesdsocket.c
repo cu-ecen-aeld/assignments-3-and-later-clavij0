@@ -17,20 +17,24 @@
 #include <syslog.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <sys/stat.h>
 
-#define PORT "9008"  // the port users will be connecting to
+#define PORT "9000"  // the port users will be connecting to
 
 #define BACKLOG 10   // how many pending connections queue will hold
 
 #define WEB "www.sirclavt.shop"
 
-#define MAXBUFLEN 1024
+#define MAXBUFLEN 1024 //set buffer lenght
+
+#define MAXBUFLEN_SIZE 2048 //Max packet size 
 
 #define FILE_NAME "/var/tmp/aesdsocketdata"
 
 int sockett;
 FILE * fptr;
 int new_fd;
+char *ptr;
 
 /*
 Step
@@ -74,23 +78,26 @@ static void signal_handler ( int signal_number )
     int errno_saved = errno;
     if ( signal_number == SIGINT ) {
         //caught_sigint = true;
-        printf("Caught signal_handler SIGINT \n");
+        printf("Caught signal, exiting SIGINT \n");
         close(sockett);
         fclose(fptr);
+        free(ptr);
         remove(FILE_NAME);
         closelog();
         exit(0);
     } else if ( signal_number == SIGTERM ) {
         //caught_sigterm = true;
-        printf("Caught signal_handler SIGTERM \n");
+        printf("Caught signal, exiting SIGTERM \n");
         close(sockett);
         fclose(fptr);
+        free(ptr);
         remove(FILE_NAME);
         closelog();
         exit(0);
     }
     errno = errno_saved;
 }
+ 
 
 void parnert_handler(int new_fd, struct sockaddr_storage their_addr,  socklen_t addr_size){
     char s[INET6_ADDRSTRLEN];
@@ -99,7 +106,7 @@ void parnert_handler(int new_fd, struct sockaddr_storage their_addr,  socklen_t 
     printf("Accepted connection from %s \n", s);
     // Receiving data
     char buf[1024];
-    char *ptr;
+    //char *ptr;
     int numbytes=0;
 
     while(1){
@@ -117,15 +124,21 @@ void parnert_handler(int new_fd, struct sockaddr_storage their_addr,  socklen_t 
             break;
         }
           
-          
+        if (numbytes>MAXBUFLEN_SIZE){
+            syslog(LOG_ERR, "Packet too large (%d bytes), discarding", numbytes);
+            // Discard the packet and continue
+            return;
+        }
+
         ptr = (char*)malloc(sizeof(char)*(MAXBUFLEN + 1));
         // // Check if the memory has been successfully
         // // allocated by malloc or not
         if (ptr == NULL) {
             printf("Memory not allocated.\n");
+            syslog(LOG_ERR,"Failed Memory not allocated.");
             exit(0);
         }
-        printf("numbytes %d\n", numbytes);
+        //printf("numbytes %d\n", numbytes);
         //buf[numbytes] = '\0';
         memcpy(ptr,buf, numbytes);//dont forget to c&p the buf recv to the alloc memory
         ptr[numbytes] = '\0';
@@ -145,27 +158,67 @@ void parnert_handler(int new_fd, struct sockaddr_storage their_addr,  socklen_t 
             }else{
                 syslog(LOG_ERR,"fseek failed");
             }
-        }
         free(ptr);
+        }
     }
 }
 
-int main (void){
+
+void daemonize() {
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        perror("fork failed");
+        exit(EXIT_FAILURE);
+    }
+
+    if (pid > 0) {
+        // Parent process exits
+        exit(EXIT_SUCCESS);
+    }
+
+    // Child process continues
+
+    // Create a new session
+    if (setsid() < 0) {
+        perror("setsid failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Set the file mode creation mask to 0
+    umask(0);
+
+    // Redirect standard file descriptors to /dev/null
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+    open("/dev/null", O_RDWR);
+    dup(0);
+    dup(0);
+}
+int main (int argc, char *argv[]){
+    
+    int daemon_mode = 0;
+
+    // Parse command line arguments
+    if (argc == 2 && strcmp(argv[1], "-d") == 0) {
+        daemon_mode = 1;
+    }
 
     struct addrinfo hints, *res, *p;
     int status;
     char ipstr[INET6_ADDRSTRLEN];
-    char s[INET6_ADDRSTRLEN];
+    //char s[INET6_ADDRSTRLEN];
     //int sockett, new_fd, numbytes;
     //int new_fd, numbytes;
-    int numbytes;
+    //int numbytes;
     socklen_t addr_size;
     int yes=1;
     void *addr;
-    char *ipver, *ptr;
+    char *ipver;
     struct sockaddr_storage their_addr;
     struct sigaction sa;
-    char buf[MAXBUFLEN];
+    //char buf[MAXBUFLEN];
 
      // syslog
     openlog("aesdsocket", LOG_PID | LOG_CONS, LOG_DAEMON);
@@ -177,12 +230,12 @@ int main (void){
     hints.ai_flags = AI_PASSIVE;
 
     //1) Create getaddrinfo
-    if((status=getaddrinfo(NULL,PORT,&hints,&res))==!0){
+    if((status=getaddrinfo(NULL,PORT,&hints,&res))!=0){
         fprintf(stderr,"getaddrinfo: %s\n", gai_strerror(status));
-        return 2;
+        return 1;
     }
 
-    printf("IP addresess for %s:\n\n", WEB);
+    //printf("IP addresess for %s:\n\n", WEB);
 
     for(p=res; p!=NULL; p = p->ai_next){
 
@@ -201,7 +254,9 @@ int main (void){
 
         if((sockett = socket(res->ai_family,res->ai_socktype,res->ai_protocol))== -1){
             perror("LISTENER: socket");
-            continue;
+            freeaddrinfo(res);
+            return -1;
+            //continue;
         }
         
         if(setsockopt(sockett,SOL_SOCKET, SO_REUSEADDR,&yes,sizeof yes)==-1){
@@ -217,13 +272,12 @@ int main (void){
         break;
     }
 
-
+//  freeaddrinfo(res);
+//     res=NULL;
     if (p==NULL){
         fprintf(stderr,"server: failed to bind \n");
         exit(1);
     }
-
-    freeaddrinfo(res);
 
     if(listen(sockett,BACKLOG)==-1){
         perror("could no open the listener");
@@ -253,8 +307,14 @@ int main (void){
         //success = false;
     }
 
-     // take this FD file and create outside in a function.
-    int i;
+    // Run as a daemon if -d argument is present
+    if (daemon_mode) {
+        //printf("Mundo");
+        daemonize();
+    }
+
+    // take this FD file and create outside in a function.
+    //int i;
     //FILE * fptr;
     char *filename = "/var/tmp/aesdsocketdata" ;
     //ptr="starting";
@@ -280,7 +340,7 @@ int main (void){
         }
 
         inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
-        printf("inet_ntop inside while %s: %s\n", ipver, ipstr);
+        //printf("inet_ntop inside while %s: %s\n", ipver, ipstr);
         
 
           
@@ -289,17 +349,20 @@ int main (void){
             //buf[numbytes] = '\0';
             parnert_handler(new_fd, their_addr,addr_size);
             
-            printf("parnert- Close connection\n");
+           // printf("parnert- Close connection\n");
+            freeaddrinfo(res); //Here must be close the res pointer
             close(new_fd);
             exit(0);
         }
         
-        printf("3 - Close connection\n");
+        //printf("3 - Close connection\n");
         close(new_fd);      
+        // freeaddrinfo(res);
+        // res=NULL;
         
     }
 
-    printf("4 - Close connection from %s \n", s);
+    // printf("4 - Close connection from %s \n", s);
 
     fclose(fptr);
     close(sockett);
