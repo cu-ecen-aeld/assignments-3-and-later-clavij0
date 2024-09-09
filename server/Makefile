@@ -4,6 +4,7 @@ CFLAGS := -Wall -Werror
 TARGET := aesdsocket
 SRC := aesdsocket.c
 OBJ := $(SRC:.c=.o)
+CROSS_COMPILE = 
 
 # Cross-compilation support
 ifeq ($(CROSS_COMPILE),)

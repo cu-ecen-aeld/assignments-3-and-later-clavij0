@@ -86,8 +86,7 @@ then
     cd busybox
     git checkout ${BUSYBOX_VERSION}
     # TODO:  Configure busybox
-    echo "TODO:  Configure busybox"
-    make distclean
+   
     make defconfig
 else
     cd busybox
