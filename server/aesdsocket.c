@@ -360,7 +360,6 @@ void *parnert_handler(void *thread_param){
                 syslog(LOG_ERR,"fseek failed");
             }
             free(ptr);   
-
             printf("Salida 1\n");
         }
                     //fclose(fptr);
