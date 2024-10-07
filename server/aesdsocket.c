@@ -225,12 +225,12 @@ static void signal_handler ( int signal_number )
         //caught_sigint = true;
         printf("Caught signal, exiting SIGINT || SIGTERM\n");
         bool_pthread = false;
-        //close(sockett);
-        //fclose(fptr);
+        close(sockett);
+        fclose(fptr);
         //free(ptr); //Don't uncomment is a Valgrid leak
         freeList();
-        //remove(FILE_NAME);
-        //closelog();
+        remove(FILE_NAME);
+        closelog();
         // exit(0);
     }
     errno = errno_saved;
@@ -621,11 +621,10 @@ int main (int argc, char *argv[]){
     }
     close(new_fd);
     pthread_join(timestamp_thread, NULL);
-    close(sockett);
-    fclose(fptr);
+   // close(sockett);
+    //fclose(fptr);
     //freeList();
-    remove(FILE_NAME);
-    closelog();
-    exit (0);
+    // remove(FILE_NAME);
+    // closelog();
    return 0;
 }
