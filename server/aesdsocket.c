@@ -37,7 +37,6 @@ FILE * fptr;
 int new_fd;
 char *ptr;
 pthread_mutex_t log_mutex;
-pthread_mutex_t log_mutex2;
 
 int time_thread_count = 0;
 
@@ -145,16 +144,6 @@ void Delete_thread()
 
 }
 
-// Function that joins a thread
-void join_thread(pthread_t thread) {
-    // Join the thread
-    if (pthread_join(thread, NULL) != 0) {
-        perror("Failed to join thread");
-    } else {
-        printf("Thread successfully joined.\n");
-    }
-}
-
 //Function handler conection without the use of threads
 /*
 void parnert_handler(int new_fd, struct sockaddr_storage their_addr,  socklen_t addr_size){
@@ -234,28 +223,15 @@ static void signal_handler ( int signal_number )
     int errno_saved = errno;
     if ( signal_number == SIGINT ||  signal_number == SIGTERM  ) {
         //caught_sigint = true;
-        printf("Caught signal, exiting SIGINT \n");
-        bool_pthread = false;
-
-        // close(sockett);
-        // fclose(fptr);
-        // //free(ptr); //Don't uncomment is a Valgrid leak
-        // freeList();
-        // remove(FILE_NAME);
-        // closelog();
-        // exit(0);
-    } else if ( signal_number == SIGTERM ) {
-        //caught_sigterm = true;
-        printf("Caught signal, exiting SIGTERM \n");
+        printf("Caught signal, exiting SIGINT || SIGTERM\n");
         bool_pthread = false;
         //close(sockett);
         //fclose(fptr);
         //free(ptr); //Don't uncomment is a Valgrid leak
-        //        freeList();
-        //        pthread_detach(pthread_self()) ;
+        freeList();
         //remove(FILE_NAME);
         //closelog();
-        //exit(0);
+        // exit(0);
     }
     errno = errno_saved;
 }
@@ -313,12 +289,11 @@ void *append_timestamp(void *arg) {
         // Open the file to append the timestamp
         // Is in the main the open FILE_NAME
         fputs(timestamp, fptr);
-        printf("Bloqeuado lock\n");
         // Unlock after writing
         pthread_mutex_unlock(&log_mutex);
-        printf("\nFree Time Mutex\n");
-        printf("Count of time mutex %d\n", time_thread_count);
-        time_thread_count++;
+        // printf("\nFree Time Mutex\n");
+        // printf("Count of time mutex %d\n", time_thread_count);
+        // time_thread_count++;
     }
     return NULL;
 }
@@ -329,8 +304,8 @@ void *parnert_handler(void *thread_param){
     struct thread_data* thread_func_args = (struct thread_data *)thread_param;
     char s[INET6_ADDRSTRLEN];
     inet_ntop(thread_func_args->their_addr.ss_family,get_in_addr((struct sockaddr *)&thread_func_args->their_addr),s, sizeof s);
-    pthread_t thread_id = pthread_self();
-    printf("Thread ID     : %lu\n", (unsigned long)thread_id);
+    // pthread_t thread_id = pthread_self();
+    // printf("Thread ID     : %lu\n", (unsigned long)thread_id);
 
 
     //inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
@@ -502,13 +477,13 @@ int main (int argc, char *argv[]){
 
         if (bind(sockett, res->ai_addr, res->ai_addrlen)== -1){
             close(sockett);
-            perror("LISTENER:Error ocurred");
+            perror("LISTENER:Error ocurred bind");
             continue;
         }
         break;
     }
 
-  //freeaddrinfo(res);
+  freeaddrinfo(res);
 //     res=NULL;
     if (p==NULL){
         fprintf(stderr,"server: failed to bind \n");
@@ -635,47 +610,22 @@ int main (int argc, char *argv[]){
             }else{
                 printf("Return join pthread client_thread%lu \n" , client_thread);
                 //pthread_join(timestamp_thread,NULL);
-                close(new_fd);              
+                //close(new_fd);              
             }
-              free(data);
+            free(data);
 
-            // if(bool_pthread == 0){
-            //     printf("Bool_pthread == 0   %lu \n" , timestamp_thread);    
-            //      if (pthread_join(timestamp_thread, NULL) !=0 ){
-            //         perror("Error pthread could not join");
-            //     }else{
-            //         printf("Return join pthread timestamp_thread %lu \n" , timestamp_thread);              
-            //         pthread_join(timestamp_thread, NULL);
-                    
-            //     }
-            // }
-        //     close(new_fd);
-        //     // pthread_mutex_unlock(&log_mutex);
-           
-        //     exit(0);
-        // }else{
-        //     printf("Return from thread \n");
-        //     //freeaddrinfo(res);//Here must be close the res pointer
-        //     close(new_fd);
-        // }
-        printf("Inseide While print\n");
+        printf("Inside While print\n");
         //Print();
-        
-        //printf("3 - Close connection\n");
-        //close(new_fd);      
-       
         // res=NULL;
         
     }
-    printf("Bool_pthread stated-2 %d \n", bool_pthread);
-    freeaddrinfo(res);
+    close(new_fd);
     pthread_join(timestamp_thread, NULL);
     close(sockett);
     fclose(fptr);
-    //free(ptr); //Don't uncomment is a Valgrid leak
-    freeList();
+    //freeList();
     remove(FILE_NAME);
     closelog();
-    exit(0);
-   return  0;
+    exit (0);
+   return 0;
 }
