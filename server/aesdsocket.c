@@ -37,6 +37,11 @@ FILE * fptr;
 int new_fd;
 char *ptr;
 pthread_mutex_t log_mutex;
+pthread_mutex_t log_mutex2;
+
+int time_thread_count = 0;
+
+bool bool_pthread = 1;
 
 /*
 Step
@@ -68,45 +73,12 @@ void *get_in_addr(struct sockaddr *sa)
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-
-static void signal_handler ( int signal_number )
-{
-    /**
-    * Save a copy of errno so we can restore it later.  See https://pubs.opengroup.org/onlinepubs/9699919799/
-    * "Operations which obtain the value of errno and operations which assign a value to errno shall be
-    *  async-signal-safe, provided that the signal-catching function saves the value of errno upon entry and
-    *  restores it before it returns."
-    */
-    int errno_saved = errno;
-    if ( signal_number == SIGINT ) {
-        //caught_sigint = true;
-        printf("Caught signal, exiting SIGINT \n");
-        close(sockett);
-        fclose(fptr);
-        free(ptr);
-        remove(FILE_NAME);
-        closelog();
-        exit(0);
-    } else if ( signal_number == SIGTERM ) {
-        //caught_sigterm = true;
-        printf("Caught signal, exiting SIGTERM \n");
-        close(sockett);
-        fclose(fptr);
-        free(ptr);
-        remove(FILE_NAME);
-        closelog();
-        exit(0);
-    }
-    errno = errno_saved;
-}
-
 struct thread_data
 {
     struct sockaddr_storage their_addr;
-    //int addr_size;
     socklen_t addr_size;
     int new_fd;    
-    bool thread_complete_success;
+    //bool thread_complete_success;
 };
 
 struct node_thread
@@ -124,6 +96,7 @@ void Insert(pthread_t thread_id_node)
     printf("Insert Thread ID %lu \n" , node_data->thread_id);
     node_data->next = head;
     head=node_data;
+   // free(node_data);
 }
 
 void Print()
@@ -135,6 +108,50 @@ void Print()
     {
         printf(" %lu \n" , temp->thread_id);
         temp=temp->next;
+    }
+}
+
+void freeList()
+{
+   struct node_thread* tmp = head;
+
+   if (head == NULL){
+    printf("NO head\n");
+    free(tmp);
+    return;
+   }
+
+   while (head != NULL)
+    {
+        tmp = head;
+        head = head->next;
+        printf("Node data %lu\n", tmp->thread_id);
+        //pthread_join(tmp->thread_id, NULL);
+        free(tmp);
+    }
+    //pthread_join(timestamp_thread, NULL);
+
+}
+
+void Delete_thread()
+{
+   struct node_thread* tmp1 = head;
+
+   while (head != NULL)
+    {
+       head = head->next;
+       free(tmp1);
+    }
+
+}
+
+// Function that joins a thread
+void join_thread(pthread_t thread) {
+    // Join the thread
+    if (pthread_join(thread, NULL) != 0) {
+        perror("Failed to join thread");
+    } else {
+        printf("Thread successfully joined.\n");
     }
 }
 
@@ -206,6 +223,44 @@ void parnert_handler(int new_fd, struct sockaddr_storage their_addr,  socklen_t 
 */
 
 
+static void signal_handler ( int signal_number )
+{
+    /**
+    * Save a copy of errno so we can restore it later.  See https://pubs.opengroup.org/onlinepubs/9699919799/
+    * "Operations which obtain the value of errno and operations which assign a value to errno shall be
+    *  async-signal-safe, provided that the signal-catching function saves the value of errno upon entry and
+    *  restores it before it returns."
+    */
+    int errno_saved = errno;
+    if ( signal_number == SIGINT ||  signal_number == SIGTERM  ) {
+        //caught_sigint = true;
+        printf("Caught signal, exiting SIGINT \n");
+        bool_pthread = false;
+
+        // close(sockett);
+        // fclose(fptr);
+        // //free(ptr); //Don't uncomment is a Valgrid leak
+        // freeList();
+        // remove(FILE_NAME);
+        // closelog();
+        // exit(0);
+    } else if ( signal_number == SIGTERM ) {
+        //caught_sigterm = true;
+        printf("Caught signal, exiting SIGTERM \n");
+        bool_pthread = false;
+        //close(sockett);
+        //fclose(fptr);
+        //free(ptr); //Don't uncomment is a Valgrid leak
+        //        freeList();
+        //        pthread_detach(pthread_self()) ;
+        //remove(FILE_NAME);
+        //closelog();
+        //exit(0);
+    }
+    errno = errno_saved;
+}
+
+
 void daemonize() {
     pid_t pid = fork();
 
@@ -241,7 +296,7 @@ void daemonize() {
  
 // Function to append timestamp to the log file
 void *append_timestamp(void *arg) {
-    while (1) {
+    while (bool_pthread) {
         // Sleep for 10 seconds
         sleep(10);
 
@@ -258,10 +313,12 @@ void *append_timestamp(void *arg) {
         // Open the file to append the timestamp
         // Is in the main the open FILE_NAME
         fputs(timestamp, fptr);
-
+        printf("Bloqeuado lock\n");
         // Unlock after writing
         pthread_mutex_unlock(&log_mutex);
         printf("\nFree Time Mutex\n");
+        printf("Count of time mutex %d\n", time_thread_count);
+        time_thread_count++;
     }
     return NULL;
 }
@@ -271,10 +328,8 @@ void *parnert_handler(void *thread_param){
 
     struct thread_data* thread_func_args = (struct thread_data *)thread_param;
     char s[INET6_ADDRSTRLEN];
-    free(thread_param);
     inet_ntop(thread_func_args->their_addr.ss_family,get_in_addr((struct sockaddr *)&thread_func_args->their_addr),s, sizeof s);
     pthread_t thread_id = pthread_self();
-
     printf("Thread ID     : %lu\n", (unsigned long)thread_id);
 
 
@@ -283,7 +338,6 @@ void *parnert_handler(void *thread_param){
     printf("Accepted connection from %s \n", s);
     // Receiving data
     char buf[1024];
-    //char *ptr;
     int numbytes=0;   
 
     while(1){
@@ -373,7 +427,7 @@ void *parnert_handler(void *thread_param){
 
     close(thread_func_args->new_fd);
     printf("Salida 2\n");
-    thread_func_args->thread_complete_success = true;
+    //thread_func_args->thread_complete_success = true;
     return NULL;
     //return thread_func_args->thread_complete_success = true;
 }
@@ -436,9 +490,9 @@ int main (int argc, char *argv[]){
 
         if((sockett = socket(res->ai_family,res->ai_socktype,res->ai_protocol))== -1){
             perror("LISTENER: socket");
-            freeaddrinfo(res);
-            return -1;
-            //continue;
+            //freeaddrinfo(res);
+            //return -1;
+            continue;
         }
         
         if(setsockopt(sockett,SOL_SOCKET, SO_REUSEADDR,&yes,sizeof yes)==-1){
@@ -454,7 +508,7 @@ int main (int argc, char *argv[]){
         break;
     }
 
-//  freeaddrinfo(res);
+  //freeaddrinfo(res);
 //     res=NULL;
     if (p==NULL){
         fprintf(stderr,"server: failed to bind \n");
@@ -488,7 +542,7 @@ int main (int argc, char *argv[]){
         printf("Error %d (%s) registering for SIGINT",errno,strerror(errno));
     }
 
-    // Run as a daemon if -d argument is present
+    // Run as a daemonpthread_d if -d argument is present
     if (daemon_mode) {
         //printf("Mundo");
         daemonize();
@@ -518,23 +572,33 @@ int main (int argc, char *argv[]){
         perror("Could not create timestamp thread");
         return 1;
     }
+    // //unsigned long thread_time_id;
+    // pid_t time_thread = pthread_self();
+    // printf("Thread time ID  time_stamp inside   : %lu\n", (unsigned long)time_thread);
 
-   
+   // thread_time_id = time_thread;
+
     head = NULL;
+    
 
-    while(1){
+    while(bool_pthread){
 
-
+        printf("Bool_pthread stated %d\n", bool_pthread);
         //accepting an incoming connection:
         addr_size = sizeof their_addr;
         new_fd = accept(sockett, (struct sockaddr *)&their_addr,(socklen_t *)&addr_size);
         if (new_fd==-1){
-            perror("No accepted");
-            //continue;
+            if (bool_pthread) {
+                perror("No accepted new_fd Accept failed");
+            }
+            continue;
+            // perror("No accepted new_fd");
+            // break;
+            // //continue;
         }
         //printf("ofr ;; new_fd %d \n", new_fd);
-        inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
-        printf("inet_ntop inside while %s: %s\n", ipver, ipstr);
+        // inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
+        // printf("inet_ntop inside while %s: %s\n", ipver, ipstr);
 
         pthread_t client_thread;
 
@@ -554,43 +618,64 @@ int main (int argc, char *argv[]){
             if (pthread_create(&client_thread,NULL,parnert_handler,(void*)data) != 0 )
             {
                 perror("Failed to create thread \n");
-                break;
+                free(data);
                 return false;
             }else{
                 printf("Pthread Created %lu \n" , client_thread);
+                //Dont free here malloc -> data
             }
             
             Insert(client_thread);
-              
+            
             if(pthread_join(client_thread,NULL) != 0)
             {
                 perror("Error pthread could not join");
-            }else{
-                printf("Return join pthread %lu \n" , client_thread);
-                close(new_fd);
-            }
-            
+                free(data);
 
+            }else{
+                printf("Return join pthread client_thread%lu \n" , client_thread);
+                //pthread_join(timestamp_thread,NULL);
+                close(new_fd);              
+            }
+              free(data);
+
+            // if(bool_pthread == 0){
+            //     printf("Bool_pthread == 0   %lu \n" , timestamp_thread);    
+            //      if (pthread_join(timestamp_thread, NULL) !=0 ){
+            //         perror("Error pthread could not join");
+            //     }else{
+            //         printf("Return join pthread timestamp_thread %lu \n" , timestamp_thread);              
+            //         pthread_join(timestamp_thread, NULL);
+                    
+            //     }
+            // }
         //     close(new_fd);
         //     // pthread_mutex_unlock(&log_mutex);
-        //    freeaddrinfo(res);
+           
         //     exit(0);
         // }else{
         //     printf("Return from thread \n");
         //     //freeaddrinfo(res);//Here must be close the res pointer
         //     close(new_fd);
         // }
-        Print();
+        printf("Inseide While print\n");
+        //Print();
+        
         //printf("3 - Close connection\n");
         //close(new_fd);      
        
         // res=NULL;
         
     }
-    close(new_fd);
+    printf("Bool_pthread stated-2 %d \n", bool_pthread);
+    freeaddrinfo(res);
+    pthread_join(timestamp_thread, NULL);
+    close(sockett);
     fclose(fptr);
-    //close(sockett);
+    //free(ptr); //Don't uncomment is a Valgrid leak
+    freeList();
+    remove(FILE_NAME);
     closelog();
-    
+    exit(0);
    return  0;
 }

@@ -1,6 +1,7 @@
 # Define variables
 CC := gcc
 CFLAGS := -Wall -Werror
+MY_LIBS := -pthread
 TARGET := aesdsocket
 SRC := aesdsocket.c
 OBJ := $(SRC:.c=.o)
@@ -18,7 +19,7 @@ all: $(TARGET)
 
 # Rule to build the aesdsocket application
 $(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ)
+	$(CC) $(CFLAGS) -o $(TARGET) $(MY_LIBS) $(OBJ) 
 
 # Rule to build object files
 %.o: %.c
