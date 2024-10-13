@@ -1,11 +1,10 @@
 # Define variables
 CC ?= $(CROSS_COMPILE)gcc
 CFLAGS ?= -Wall -Werror
-MY_LIBS ?= -pthread
+LDFLAGS ?= -pthread
 TARGET ?= aesdsocket
 SRC := aesdsocket.c
 OBJ := $(SRC:.c=.o)
-CROSS_COMPILE = 
 
 # Cross-compilation support
 ifeq ($(CROSS_COMPILE),)
