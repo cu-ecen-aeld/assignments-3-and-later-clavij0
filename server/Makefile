@@ -1,8 +1,8 @@
 # Define variables
-CC := gcc
-CFLAGS := -Wall -Werror
-MY_LIBS := -pthread
-TARGET := aesdsocket
+CC ?= gcc
+CFLAGS ?= -Wall -Werror
+MY_LIBS ?= -pthread
+TARGET ?= aesdsocket
 SRC := aesdsocket.c
 OBJ := $(SRC:.c=.o)
 CROSS_COMPILE = 
@@ -12,7 +12,7 @@ ifeq ($(CROSS_COMPILE),)
     CROSS_COMPILE := 
 endif
 
-CC := $(CROSS_COMPILE)gcc
+CC ?= $(CROSS_COMPILE)gcc
 
 # Default target to build the aesdsocket application
 all: $(TARGET)
