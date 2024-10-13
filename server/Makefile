@@ -12,6 +12,7 @@ ifeq ($(CROSS_COMPILE),)
     CROSS_COMPILE := 
 endif
 
+#CC
 CC ?= $(CROSS_COMPILE)gcc
 
 # Default target to build the aesdsocket application
@@ -31,3 +32,4 @@ clean:
 
 # Phony targets
 .PHONY: all clean
+
