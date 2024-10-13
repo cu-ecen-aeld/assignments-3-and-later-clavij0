@@ -18,7 +18,7 @@ all: $(TARGET)
 
 # Rule to build the aesdsocket application
 $(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $(TARGET) $(MY_LIBS) $(OBJ) 
+	$(CC) $(CFLAGS) -o $(TARGET) $(LDFLAGS) $(OBJ) 
 
 # Rule to build object files
 %.o: %.c
