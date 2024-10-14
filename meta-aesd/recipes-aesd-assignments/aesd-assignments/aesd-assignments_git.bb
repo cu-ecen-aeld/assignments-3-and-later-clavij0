@@ -10,7 +10,7 @@ SRC_URI = "git://git@github.com/cu-ecen-aeld/assignments-3-and-later-clavij0;pro
  
 PV = "1.0+git${SRCPV}"
 # TODO: set to reference a specific commit hash in your assignment repo
-SRCREV = "9499a6fb6abe469be584be438ba370fd5e24a5a6"
+SRCREV = "c80165bfc829d349e01d6d9ada430a60979cb842"
 
 # This sets your staging directory based on WORKDIR, where WORKDIR is defined at 
 # https://docs.yoctoproject.org/ref-manual/variables.html?highlight=workdir#term-WORKDIR
@@ -31,7 +31,7 @@ INITSCRIPT_NAME:${PN} = "startup-aesdsocket.sh"
 
 # TODO: customize these as necessary for any libraries you need for your application
 # (and remove comment)
-TARGET_LDFLAGS += "LDFLAGS"
+#TARGET_LDFLAGS += "-pthread"
 
 do_configure () {
 	:
@@ -55,6 +55,6 @@ do_install () {
 	install -m 0755 ${S}/startup-aesdsocket.sh ${D}${bindir}/
 
 	install -d ${D}${sysconfdir}/init.d
-	install -m 0755 ${S}/aesdsocket ${D}${sysconfdir}/init.d/aesdsocket
-	install -m 0755 ${S}/startup-aesdsocket.sh ${D}${sysconfdir}/init.d/startup-aesdsocket.sh
+	install -m 0755 ${S}/aesdsocket ${D}${sysconfdir}/init.d/
+	install -m 0755 ${S}/startup-aesdsocket.sh ${D}${sysconfdir}/init.d/
 }
