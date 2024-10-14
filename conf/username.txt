@@ -1,5 +1,1 @@
-<<<<<<< HEAD
-clavij0
-=======
 aesd-example
->>>>>>> yocto-assignments-base/master
