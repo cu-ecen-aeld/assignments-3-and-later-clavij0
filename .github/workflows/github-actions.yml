@@ -25,7 +25,7 @@ jobs:
                  -v ${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE} \
                  cuaesd/aesd-autotest:24-assignment6-yocto \
                  --workdir=${GITHUB_WORKSPACE} \
-                 echo "Skipping build I dont have too much HDD"
+                 ./build.sh
           - name: Cleanup
             if: always()
             run: |
@@ -37,4 +37,4 @@ jobs:
                  -v ${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE} \
                  cuaesd/aesd-autotest:assignment6-yocto \
                  --workdir=${GITHUB_WORKSPACE} \
-                 /bin/bash -c "export SKIP_BUILD=1 && ./full-test.sh"
+                 ./full-test.sh
