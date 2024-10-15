@@ -26,6 +26,8 @@ jobs:
                  cuaesd/aesd-autotest:24-assignment6-yocto \
                  --workdir=${GITHUB_WORKSPACE} \
                  ./build.sh
+	  - name: Install killall
+	    run: sudo apt-get install -y psmisc
           - name: Cleanup
             if: always()
             run: |
