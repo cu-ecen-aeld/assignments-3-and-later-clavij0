@@ -16,6 +16,10 @@ jobs:
           - uses: webfactory/ssh-agent@v0.5.4
             with:
                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+                 
+          - name: Install killall
+            run: sudo apt-get install -y psmisc
+
           - name: Run build
             timeout-minutes: 900
             run: |
