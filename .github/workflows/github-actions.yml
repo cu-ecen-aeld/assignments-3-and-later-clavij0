@@ -37,4 +37,4 @@ jobs:
                  -v ${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE} \
                  cuaesd/aesd-autotest:assignment6-yocto \
                  --workdir=${GITHUB_WORKSPACE} \
-                 ./full-test.sh
+                  /bin/bash -c "apt-get update && apt-get install -y psmisc && ./full-test.sh"
