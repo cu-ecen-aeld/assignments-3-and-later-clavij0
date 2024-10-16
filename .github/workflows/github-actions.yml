@@ -37,4 +37,4 @@ jobs:
                  -v ${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE} \
                  cuaesd/aesd-autotest:assignment6-yocto \
                  --workdir=${GITHUB_WORKSPACE} \
-                  /bin/bash -c "export SKIP_BUILD=1 && ./full-test.sh"
+                  ./full-test.sh
