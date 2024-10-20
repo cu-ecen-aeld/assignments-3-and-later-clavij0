@@ -24,21 +24,15 @@
 
 #define BACKLOG 10   // how many pending connections queue will hold
 
-//#define WEB "www.sirclavt.shop"
-
 #define MAXBUFLEN 1024 //set buffer lenght
 
 #define MAXBUFLEN_SIZE 2048 //Max packet size 
 
 #define FILE_NAME "/var/tmp/aesdsocketdata"
 
-int sockett;
 FILE * fptr;
-int new_fd;
 char *ptr;
 pthread_mutex_t log_mutex;
-
-int time_thread_count = 0;
 
 bool bool_pthread = 1;
 
@@ -77,7 +71,6 @@ struct thread_data
     struct sockaddr_storage their_addr;
     socklen_t addr_size;
     int new_fd;    
-    //bool thread_complete_success;
 };
 
 struct node_thread
@@ -124,11 +117,11 @@ void freeList()
     {
         tmp = head;
         head = head->next;
-        printf("Node data %lu\n", tmp->thread_id);
-        //pthread_join(tmp->thread_id, NULL);
+        //printf("Node data %lu\n", tmp->thread_id);
+        syslog(LOG_INFO, "Pthread Node Created data %lu", tmp->thread_id); //Just for my control
+        pthread_join(tmp->thread_id, NULL);
         free(tmp);
     }
-    //pthread_join(timestamp_thread, NULL);
 
 }
 
@@ -144,74 +137,6 @@ void Delete_thread()
 
 }
 
-//Function handler conection without the use of threads
-/*
-void parnert_handler(int new_fd, struct sockaddr_storage their_addr,  socklen_t addr_size){
-    char s[INET6_ADDRSTRLEN];
-    inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
-    syslog(LOG_INFO, "Accepted connection from %s", s);
-    printf("Accepted connection from %s \n", s);
-    // Receiving data
-    char buf[1024];
-    //char *ptr;
-    int numbytes=0;
-
-    while(1){
-        
-        numbytes = recvfrom(new_fd, buf, MAXBUFLEN-1 , 0,(struct sockaddr *)&their_addr, &addr_size);
-
-        if (numbytes == -1){
-            syslog(LOG_ERR, "ERROR recv() failed-Closed connection from %s", s);
-            //perror("recv() failed");
-            break;
-        }else if(numbytes == 0){
-            //printf("wWHILE 2 - Closed connection from %s \n",s);
-            syslog(LOG_INFO, "Closed connection from %s", s);
-            close(new_fd);
-            break;
-        }
-          
-        if (numbytes>MAXBUFLEN_SIZE){
-            syslog(LOG_ERR, "Packet too large (%d bytes), discarding", numbytes);
-            // Discard the packet and continue
-            return;
-        }
-
-        ptr = (char*)malloc(sizeof(char)*(MAXBUFLEN + 1));
-        // // Check if the memory has been successfully
-        // // allocated by malloc or not
-        if (ptr == NULL) {
-            printf("Memory not allocated.\n");
-            syslog(LOG_ERR,"Failed Memory not allocated.");
-            exit(0);
-        }
-        //printf("numbytes %d\n", numbytes);
-        //buf[numbytes] = '\0';
-        memcpy(ptr,buf, numbytes);//dont forget to c&p the buf recv to the alloc memory
-        ptr[numbytes] = '\0';
-        //ptr=buf;
-        fputs(ptr,fptr);
-        
-        if(strchr(ptr,'\n')){
-            if(fseek(fptr,0,SEEK_SET)==0){
-                char file_buf[MAXBUFLEN];
-                int read_bytes;
-                while ((read_bytes = fread(file_buf, sizeof(char), sizeof file_buf,fptr)) > 0) {
-                    if (send(new_fd, file_buf,read_bytes, 0) == -1){
-                        syslog(LOG_ERR,"Send action failed");
-                        break;
-                    }
-                }
-            }else{
-                syslog(LOG_ERR,"fseek failed");
-            }
-        free(ptr);
-        }
-    }
-}
-*/
-
-
 static void signal_handler ( int signal_number )
 {
     /**
@@ -222,16 +147,10 @@ static void signal_handler ( int signal_number )
     */
     int errno_saved = errno;
     if ( signal_number == SIGINT ||  signal_number == SIGTERM  ) {
-        //caught_sigint = true;
-        printf("Caught signal, exiting SIGINT || SIGTERM\n");
+        //printf("Caught signal, exiting SIGINT || SIGTERM\n");
+        syslog(LOG_INFO,"Caught signal, exiting SIGINT || SIGTERM\n"); //Just for my control
         bool_pthread = false;
-        close(sockett);
-        fclose(fptr);
-        //free(ptr); //Don't uncomment is a Valgrid leak
-        freeList();
-        remove(FILE_NAME);
-        closelog();
-        // exit(0);
+
     }
     errno = errno_saved;
 }
@@ -292,8 +211,6 @@ void *append_timestamp(void *arg) {
         // Unlock after writing
         pthread_mutex_unlock(&log_mutex);
         // printf("\nFree Time Mutex\n");
-        // printf("Count of time mutex %d\n", time_thread_count);
-        // time_thread_count++;
     }
     return NULL;
 }
@@ -304,10 +221,7 @@ void *parnert_handler(void *thread_param){
     struct thread_data* thread_func_args = (struct thread_data *)thread_param;
     char s[INET6_ADDRSTRLEN];
     inet_ntop(thread_func_args->their_addr.ss_family,get_in_addr((struct sockaddr *)&thread_func_args->their_addr),s, sizeof s);
-    // pthread_t thread_id = pthread_self();
-    // printf("Thread ID     : %lu\n", (unsigned long)thread_id);
-
-
+    
     //inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
     syslog(LOG_INFO, "Accepted connection from %s", s);
     printf("Accepted connection from %s \n", s);
@@ -329,7 +243,9 @@ void *parnert_handler(void *thread_param){
             close(thread_func_args->new_fd);
             break;
         }
-       printf("INSIDE WHILE \n");
+        //printf("INSIDE WHILE \n");
+        syslog(LOG_INFO, "Inside parnert_handler funtion-> recfrom"); //Just for my control
+
 
         if (numbytes>MAXBUFLEN_SIZE){
             syslog(LOG_ERR, "Packet too large (%d bytes), discarding", numbytes);
@@ -343,16 +259,7 @@ void *parnert_handler(void *thread_param){
             printf("FORWARD inside MUTEX\n");
         }
 
-    // fptr = fopen(FILE_NAME, "a"); 
-   
-    //     //fptr=open(filename, O_RDWR | O_CREAT | O_APPEND, 0644 );
-    //     if (fptr != NULL){
-    //         syslog(LOG_INFO, "Correctly entered arguments");
-            
-    //     }else{
-    //         syslog(LOG_ERR,"Missing Filename and Text");        
-    //     }
-
+  
         ptr = (char*)malloc(sizeof(char)*(MAXBUFLEN + 1));
         // // Check if the memory has been successfully
         // // allocated by malloc or not
@@ -363,9 +270,7 @@ void *parnert_handler(void *thread_param){
         }
         memcpy(ptr,buf, numbytes);//dont forget to c&p the buf recv to the alloc memory
         ptr[numbytes] = '\0';
-        //ptr=buf;
-
-        
+       
         fputs(ptr,fptr);
         
         if(strchr(ptr,'\n')){
@@ -376,7 +281,8 @@ void *parnert_handler(void *thread_param){
                     if(pthread_mutex_unlock(&log_mutex) != 0){
                         perror("Unable to unlock pthread_mutex");
                     }else{
-                        printf("OUT MUTEXT\n");
+                        //printf("OUT MUTEXT\n");
+                        syslog(LOG_INFO,"OUT MUTEXT\n"); //Just for my control
                     }
 
                     if (send(thread_func_args->new_fd, file_buf,read_bytes, 0) == -1){
@@ -401,10 +307,10 @@ void *parnert_handler(void *thread_param){
     }
 
     close(thread_func_args->new_fd);
+    free(thread_func_args);
+
     printf("Salida 2\n");
-    //thread_func_args->thread_complete_success = true;
     return NULL;
-    //return thread_func_args->thread_complete_success = true;
 }
 
 int main (int argc, char *argv[]){
@@ -418,6 +324,9 @@ int main (int argc, char *argv[]){
 
     struct addrinfo hints, *res, *p;
     int status;
+    int sockett;
+    int new_fd;
+
     char ipstr[INET6_ADDRSTRLEN];
 
     socklen_t addr_size;
@@ -446,8 +355,6 @@ int main (int argc, char *argv[]){
         return 1;
     }
 
-    //printf("IP addresess for %s:\n\n", WEB);
-
     for(p=res; p!=NULL; p = p->ai_next){
 
         if(p->ai_family == AF_INET){
@@ -465,7 +372,6 @@ int main (int argc, char *argv[]){
 
         if((sockett = socket(res->ai_family,res->ai_socktype,res->ai_protocol))== -1){
             perror("LISTENER: socket");
-            //freeaddrinfo(res);
             //return -1;
             continue;
         }
@@ -484,7 +390,6 @@ int main (int argc, char *argv[]){
     }
 
   freeaddrinfo(res);
-//     res=NULL;
     if (p==NULL){
         fprintf(stderr,"server: failed to bind \n");
         exit(1);
@@ -519,7 +424,6 @@ int main (int argc, char *argv[]){
 
     // Run as a daemonpthread_d if -d argument is present
     if (daemon_mode) {
-        //printf("Mundo");
         daemonize();
     }
 
@@ -547,11 +451,6 @@ int main (int argc, char *argv[]){
         perror("Could not create timestamp thread");
         return 1;
     }
-    // //unsigned long thread_time_id;
-    // pid_t time_thread = pthread_self();
-    // printf("Thread time ID  time_stamp inside   : %lu\n", (unsigned long)time_thread);
-
-   // thread_time_id = time_thread;
 
     head = NULL;
     
@@ -567,13 +466,7 @@ int main (int argc, char *argv[]){
                 perror("No accepted new_fd Accept failed");
             }
             continue;
-            // perror("No accepted new_fd");
-            // break;
-            // //continue;
         }
-        //printf("ofr ;; new_fd %d \n", new_fd);
-        // inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
-        // printf("inet_ntop inside while %s: %s\n", ipver, ipstr);
 
         pthread_t client_thread;
 
@@ -582,13 +475,6 @@ int main (int argc, char *argv[]){
         data->addr_size=addr_size;
         data->new_fd=new_fd;
         //data->mutex=mutex;
-        //printf("data pointer %lu\n", data);
-        //Here change fork to pthread 
-        
-        // if (!fork()) { // this is the child process 
-        //     close(sockett); // child doesn't need the listener
-            //printf("data pointer fork %lu\n", data);
-            //printf("inside fork creates pthread\n");
 
             if (pthread_create(&client_thread,NULL,parnert_handler,(void*)data) != 0 )
             {
@@ -601,30 +487,19 @@ int main (int argc, char *argv[]){
             }
             
             Insert(client_thread);
-            
-            if(pthread_join(client_thread,NULL) != 0)
-            {
-                perror("Error pthread could not join");
-                free(data);
 
-            }else{
-                printf("Return join pthread client_thread%lu \n" , client_thread);
-                //pthread_join(timestamp_thread,NULL);
-                //close(new_fd);              
-            }
-            free(data);
-
-        printf("Inside While print\n");
-        //Print();
-        // res=NULL;
+        //printf("Inside While print\n");
+        syslog(LOG_INFO,"Inside While of creating the client-thread");//Just for my control
         
     }
-    close(new_fd);
+    //close(new_fd);
     pthread_join(timestamp_thread, NULL);
-   // close(sockett);
-    //fclose(fptr);
-    //freeList();
-    // remove(FILE_NAME);
-    // closelog();
+    syslog(LOG_INFO,"OUT OF WHILE remove FILE_NAME");//Just for my control
+    close(sockett);
+    fclose(fptr);
+    freeList();
+    remove(FILE_NAME);
+    closelog();
+  
    return 0;
 }
