@@ -16,6 +16,7 @@ jobs:
           - uses: webfactory/ssh-agent@v0.5.4
             with:
                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+                 
           - name: Run build
             timeout-minutes: 900
             run: |
@@ -37,4 +38,4 @@ jobs:
                  -v ${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE} \
                  cuaesd/aesd-autotest:assignment6-yocto \
                  --workdir=${GITHUB_WORKSPACE} \
-                 ./full-test.sh
+                  ./full-test.sh
