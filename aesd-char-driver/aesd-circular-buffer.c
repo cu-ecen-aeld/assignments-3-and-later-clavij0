@@ -40,7 +40,7 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 
     //Set bounderi of the circle buffer AESDCHAR_MAX.....
     for (int i =0 ; i<AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++){
-        printf("buffer %s e i++ %d\n",buffer->entry->buffptr, i);
+       // printf("buffer %s e i++ %d\n",buffer->entry->buffptr, i);
 
 
         if(char_offset < buffer->entry[out_offset].size){
