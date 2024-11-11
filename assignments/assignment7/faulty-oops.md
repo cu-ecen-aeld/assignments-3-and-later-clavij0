@@ -1,8 +1,9 @@
+## Assignment 7: Error ##
 
-
-# echo “hello_world” > /dev/faulty #
+## echo “hello_world” > /dev/faulty ##
 
 Unable to handle kernel NULL pointer dereference at virtual address 0000000000000000
+
 Mem abort info:
   ESR = 0x0000000096000045
   EC = 0x25: DABT (current EL), IL = 32 bits
