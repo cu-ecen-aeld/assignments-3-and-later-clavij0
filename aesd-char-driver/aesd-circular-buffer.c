@@ -13,7 +13,7 @@
 #else
 #include <string.h>
 #endif
-#include <stdio.h>
+//#include <stdio.h>
 
 
 #include "aesd-circular-buffer.h"
@@ -42,14 +42,13 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     for (int i =0 ; i<AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++){
        // printf("buffer %s e i++ %d\n",buffer->entry->buffptr, i);
 
-
         if(char_offset < buffer->entry[out_offset].size){
             *entry_offset_byte_rtn = char_offset;
-            
+            //PDEBUG("unread_bytes 3 %zu", entry_offset_byte_rtn); //control
             return &buffer->entry[out_offset];
 
         }else{
-            //With this opt off_Set I can track the char offset current position and move thought it buffer
+            //With this opt off_Set I can track the char offset current position and move throught it buffer
             char_offset = char_offset - buffer->entry[out_offset].size;
              //printf("Char_offset INSIDE %lu\n",char_offset);
 
@@ -68,26 +67,30 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 * Any necessary locking must be handled by the caller
 * Any memory referenced in @param add_entry must be allocated by and/or must have a lifetime managed by the caller.
 */
-void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry)
+const char *aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry)
 {
     /**
     * TODO: implement per description
     */
    //Check if in_offs and out_offs are in the same location to change the status of buffer->full
+   const char* retval = NULL;
    if((buffer->in_offs +1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED == buffer->out_offs){
         buffer->full=true;
    }
 
    if(buffer->full){
+    retval = buffer->entry[buffer->out_offs].buffptr; // Save the pointer to the overwritten data, is returned TO aesd_write to check the NULL pointer
     buffer->out_offs = (buffer->out_offs+1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
    }
    
-   //Add to the circular buffer untill full "in_offs=rear=write"
-   buffer->in_offs = (buffer->in_offs + 1 ) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+   //Add add new entry to the circular buffer untill full "in_offs=rear=write"
    buffer->entry[buffer->in_offs]= *add_entry;
+    
+   // Update in_offs
+   buffer->in_offs = (buffer->in_offs + 1 ) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+   
 
-
-
+   return retval;
 
 }
 
