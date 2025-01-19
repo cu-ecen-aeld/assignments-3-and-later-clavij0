@@ -80,25 +80,25 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
    	mutex_unlock(&dev->lock);
 
     if (entry != NULL){
-		unread_bytes = entry->size - entry_offset;
-        printk(KERN_INFO "entry->size: %zu\n", entry->size);
-        printk(KERN_INFO "entry_offset: %zu\n", entry_offset);
-
-        printk(KERN_INFO "unread_bytes: %zu\n", unread_bytes);
-
-		read_size = (unread_bytes > count) ? count : unread_bytes;
+		// unread_bytes = entry->size - entry_offset;
+        // printk(KERN_INFO "unread_bytes: %zu\n", unread_bytes);
+		// read_size = (unread_bytes > count) ? count : unread_bytes;
+        // printk(KERN_INFO "entry->size: %zu\n", entry->size);
+        // printk(KERN_INFO "entry_offset: %zu\n", entry_offset);
 
         bytes_to_copy = min(entry->size - entry_offset, count);
+
         printk(KERN_INFO "bytes_to_copy: %zu\n", bytes_to_copy);
         printk(KERN_INFO "count: %zu\n", count);
 
 
-		PDEBUG("Reading message %.*s of size %zu", read_size, entry->buffptr + entry_offset, read_size);
+		//PDEBUG("Reading message %.*s of size %zu", bytes_to_copy, entry->buffptr + entry_offset, bytes_to_copy);
 		if (copy_to_user(buf, entry->buffptr + entry_offset, read_size)){
 			return -EINTR;
 		}
-		*f_pos += read_size;
-		retval = read_size;
+        // *f_pos += bytes_to_copy; update the pointer position for the next reading
+		*f_pos += bytes_to_copy;
+		retval = bytes_to_copy;
 	}else{
         PDEBUG("NO DATA TO READ");
     }
@@ -166,15 +166,13 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         //once we detect the /n we reset the value of buffptr and size to get the next text.
         dev->buffer_entry.buffptr = NULL;
         dev->buffer_entry.size = 0;
-		//memset(&dev->cir_buff, 0, sizeof(struct aesd_buffer_entry));
     }
     
     
-    //*f_pos +=count;
+    *f_pos +=count;
     
     retval = count;
     mutex_unlock(&dev->lock);
-    //kfree(dev->buffer_entry.buffptr);
     //--------------//
     out:
         mutex_unlock(&dev->lock);

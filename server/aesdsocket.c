@@ -28,10 +28,16 @@
 
 #define MAXBUFLEN_SIZE 2048 //Max packet size 
 
-#define FILE_NAME "/var/tmp/aesdsocketdata"
+//#define FILE_NAME "/var/tmp/aesdsocketdata"
 
-FILE * fptr;
-char *ptr;
+#define USE_AESD_CHAR_DEVICE 1
+
+#if (USE_AESD_CHAR_DEVICE)
+#define FILE_NAME  "/dev/aesdchar"
+#else
+#define FILE_NAME  "/var/tmp/aesdsocketdata"
+#endif
+
 pthread_mutex_t log_mutex;
 
 bool bool_pthread = 1;
@@ -207,7 +213,7 @@ void *append_timestamp(void *arg) {
 
         // Open the file to append the timestamp
         // Is in the main the open FILE_NAME
-        fputs(timestamp, fptr);
+        //fputs(timestamp, fptr);
         // Unlock after writing
         pthread_mutex_unlock(&log_mutex);
         // printf("\nFree Time Mutex\n");
@@ -228,6 +234,8 @@ void *parnert_handler(void *thread_param){
     // Receiving data
     char buf[1024];
     int numbytes=0;   
+    char *ptr = NULL;
+    FILE * fptr;
 
     while(1){
         
@@ -243,13 +251,14 @@ void *parnert_handler(void *thread_param){
             close(thread_func_args->new_fd);
             break;
         }
-        //printf("INSIDE WHILE \n");
         syslog(LOG_INFO, "Inside parnert_handler funtion-> recfrom"); //Just for my control
 
-
+        //printf("Numbytes %d 1\n", numbytes);
         if (numbytes>MAXBUFLEN_SIZE){
             syslog(LOG_ERR, "Packet too large (%d bytes), discarding", numbytes);
             // Discard the packet and continue
+            printf("error numbytes numbytes>MAXBUFLEN_SIZE\n");
+
             return 0;
         }
         if (pthread_mutex_lock(&log_mutex) != 0)
@@ -259,7 +268,8 @@ void *parnert_handler(void *thread_param){
             printf("FORWARD inside MUTEX\n");
         }
 
-  
+        printf("Numbytes %d 2\n", numbytes);
+
         ptr = (char*)malloc(sizeof(char)*(MAXBUFLEN + 1));
         // // Check if the memory has been successfully
         // // allocated by malloc or not
@@ -268,38 +278,72 @@ void *parnert_handler(void *thread_param){
             syslog(LOG_ERR,"Failed Memory not allocated.");
             exit(0);
         }
+
         memcpy(ptr,buf, numbytes);//dont forget to c&p the buf recv to the alloc memory
-        ptr[numbytes] = '\0';
+
+        fptr = fopen(FILE_NAME, "w+"); 
+   
+        if (fptr != NULL){
+            syslog(LOG_INFO, "Correctly entered arguments");
+            
+        }else{
+            syslog(LOG_ERR,"Missing Filename and Text");        
+        }
        
-        fputs(ptr,fptr);
+
+        if( fwrite (ptr,sizeof(char),numbytes,fptr) < numbytes){
+            syslog(LOG_ERR,"Could not write into FD %s\n", strerror(errno));
+        }
+
+        //printf("Written to file: %s\n", ptr);
         
+        if (fclose(fptr) == EOF){
+            syslog(LOG_ERR,"Error Closing FD\n");
+        }else{
+            syslog(LOG_INFO,"Success clossing\n");
+        }
+
         if(strchr(ptr,'\n')){
-            if(fseek(fptr,0,SEEK_SET)==0){
-                char file_buf[MAXBUFLEN];
-                int read_bytes;
-                while ((read_bytes = fread(file_buf, sizeof(char), sizeof file_buf,fptr)) > 0) {
-                    if(pthread_mutex_unlock(&log_mutex) != 0){
-                        perror("Unable to unlock pthread_mutex");
-                    }else{
-                        //printf("OUT MUTEXT\n");
-                        syslog(LOG_INFO,"OUT MUTEXT\n"); //Just for my control
-                    }
+            syslog(LOG_INFO,"Inside ptr\n");
 
-                    if (send(thread_func_args->new_fd, file_buf,read_bytes, 0) == -1){
-                        syslog(LOG_ERR,"Send action failed");
-                        break;
-                    } 
+            char file_buf[MAXBUFLEN]={0};
+            int read_bytes;
+
+            fptr = fopen(FILE_NAME, "r+"); 
+
+            if (!fptr) {
+            syslog(LOG_ERR,"File is not opened %s",strerror(errno));
+            fptr = fopen(FILE_NAME, "a+");
+                if (!fptr) {
+                    perror("Failed to open file");
+                    exit(EXIT_FAILURE);
                 }
-
-            }else{
-                syslog(LOG_ERR,"fseek failed");
             }
+            while ((read_bytes = fread(file_buf, sizeof(char), numbytes,fptr)) > 0) {
+                syslog(LOG_INFO,"Read bytes\n");
+
+                if (send(thread_func_args->new_fd, file_buf,read_bytes, 0) < 0){
+                    syslog(LOG_ERR,"Send action failed");
+                    break;
+                } 
+                if(pthread_mutex_unlock(&log_mutex) != 0){
+                    perror("Unable to unlock pthread_mutex");
+                }else{
+                    printf("OUT MUTEXT 2\n");
+                    syslog(LOG_INFO,"OUT MUTEXT 2\n"); //Just for my control
+                }
+            }
+
             free(ptr);   
             printf("Salida 1\n");
+            fclose(fptr);
+        }else{
+            printf("Detected long_file.txt\n");
+            pthread_mutex_unlock(&log_mutex);
         }
-                    //fclose(fptr);
 
     }
+      
     if (numbytes == 0) {
         printf("Client disconnected\n");
     } else if (numbytes == -1) {
@@ -427,31 +471,16 @@ int main (int argc, char *argv[]){
         daemonize();
     }
 
-    // take this FD file and create outside in a function.
-    //int i;
-    //FILE * fptr;
-    //char *filename = "/var/tmp/aesdsocketdata" ;
-        //ptr="starting";
-
-       //filename = aesdsocketdata;
-    fptr = fopen(FILE_NAME, "w+"); 
-   
-    //fptr=open(filename, O_RDWR | O_CREAT | O_APPEND, 0644 );
-    if (fptr != NULL){
-        syslog(LOG_INFO, "Correctly entered arguments");
-        
-    }else{
-        syslog(LOG_ERR,"Missing Filename and Text");        
-    }
-    
-
     // Create a thread to periodically append the timestamp
-    pthread_t timestamp_thread;
-    if (pthread_create(&timestamp_thread, NULL, append_timestamp, NULL) != 0) {
-        perror("Could not create timestamp thread");
-        return 1;
+    //Timestamp REMOVED in assignment-8
+      pthread_t timestamp_thread;
+    if(!USE_AESD_CHAR_DEVICE){
+        printf("Timestamp activeted\n");
+        if (pthread_create(&timestamp_thread, NULL, append_timestamp, NULL) != 0) {
+            perror("Could not create timestamp thread");
+            return 1;
+        }    
     }
-
     head = NULL;
     
 
@@ -493,12 +522,15 @@ int main (int argc, char *argv[]){
         
     }
     //close(new_fd);
-    pthread_join(timestamp_thread, NULL);
+    //Timestamp REMOVED in assignment-8
+    
+    if(!USE_AESD_CHAR_DEVICE){
+        pthread_join(timestamp_thread, NULL);
+        remove(FILE_NAME);
+    }
     syslog(LOG_INFO,"OUT OF WHILE remove FILE_NAME");//Just for my control
-    close(sockett);
-    fclose(fptr);
     freeList();
-    remove(FILE_NAME);
+    close(sockett);
     closelog();
   
    return 0;
