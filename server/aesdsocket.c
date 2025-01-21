@@ -359,7 +359,7 @@ void *parnert_handler(void *thread_param){
 
 int main (int argc, char *argv[]){
     
-    int daemon_mode = 0;
+    int daemon_mode = 1;
 
     // Parse command line arguments
     if (argc == 2 && strcmp(argv[1], "-d") == 0) {
