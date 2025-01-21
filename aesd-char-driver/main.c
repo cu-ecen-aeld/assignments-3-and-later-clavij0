@@ -88,12 +88,12 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
         bytes_to_copy = min(entry->size - entry_offset, count);
 
-        printk(KERN_INFO "bytes_to_copy: %zu\n", bytes_to_copy);
-        printk(KERN_INFO "count: %zu\n", count);
+        //printk(KERN_INFO "bytes_to_copy: %zu\n", bytes_to_copy);
+        //printk(KERN_INFO "count: %zu\n", count);
 
 
 		//PDEBUG("Reading message %.*s of size %zu", bytes_to_copy, entry->buffptr + entry_offset, bytes_to_copy);
-		if (copy_to_user(buf, entry->buffptr + entry_offset, read_size)){
+		if (copy_to_user(buf, entry->buffptr + entry_offset, bytes_to_copy)){
 			return -EINTR;
 		}
         // *f_pos += bytes_to_copy; update the pointer position for the next reading
