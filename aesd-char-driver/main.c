@@ -164,7 +164,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         PDEBUG("Added entry %s", dev->buffer_entry.buffptr);
         //aesd_circular_buffer_add_entry(dev->cir_buff,dev->tmp_entry);
         if (delete_item != NULL){
-			PDEBUG("Deleted entry %s", delete_item);
+            
+			PDEBUG("Deleted entry %s",sizeof(delete_item),delete_item);
 			kfree(delete_item);
 		}	
         //once we detect the /n we reset the value of buffptr and size to get the next text.
