@@ -159,11 +159,11 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     PDEBUG("dev->buffer_entry.size %zu",dev->buffer_entry.size );
 
     if (strchr(dev->buffer_entry.buffptr,'\n') != NULL){
-        //dev->buffer_entry.size = '\0';
         PDEBUG("Newline character detected");
+        
         const char *delete_item = aesd_circular_buffer_add_entry(&dev->cir_buff,&dev->buffer_entry);
-        PDEBUG("Data Deleted size: %zu", sizeof(delete_item));
-        PDEBUG("Added entry %s", dev->buffer_entry.buffptr);
+        
+        PDEBUG("Added entry  %.*s",dev->buffer_entry.size dev->buffer_entry.buffptr);
         //aesd_circular_buffer_add_entry(dev->cir_buff,dev->tmp_entry);
         if (delete_item != NULL){
             //char temp[dev->buffer_entry.size+1];
