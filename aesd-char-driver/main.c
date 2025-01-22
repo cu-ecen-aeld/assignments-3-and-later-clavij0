@@ -30,6 +30,7 @@ MODULE_AUTHOR("clavij0"); /** TODO: fill in your name **/
 MODULE_LICENSE("Dual BSD/GPL");
 
 struct aesd_dev *aesd_device;
+    int newl_counter;
 
 int aesd_open(struct inode *inode, struct file *filp)
 {
@@ -117,8 +118,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
   
     ssize_t retval = -ENOMEM;
     struct aesd_dev *dev = filp->private_data;
-    char *p;
-    size_t newl_counter;
+    //char *p;
     //const char *new_entry;
 
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
@@ -143,7 +143,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         kfree(dev->buffer_entry.buffptr);
         dev->buffer_entry.buffptr = NULL;
         dev->buffer_entry.size = 0;
-        goto out;
+       // goto out;
     }
  
 
@@ -158,14 +158,14 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     dev->buffer_entry.size += count;
     PDEBUG("dev->buffer_entry.size %zu",dev->buffer_entry.size );
 
-    //if (strchr(dev->buffer_entry.buffptr,'\n') != NULL){
-    if ((dev->buffer_entry.size-1) == '\n'){
+    if (strchr(dev->buffer_entry.buffptr,'\n') != NULL){
+    //if ((dev->buffer_entry.size) == '\n'){
         //*p = '\0';
         newl_counter++;
         PDEBUG("Newline character detected");
         
         const char *delete_item = aesd_circular_buffer_add_entry(&dev->cir_buff,&dev->buffer_entry);
-        
+        PDEBUG("nEWLINE COUNTER %d\n",newl_counter);
         PDEBUG("Added entry  %.*s",dev->buffer_entry.size, dev->buffer_entry.buffptr);
         //aesd_circular_buffer_add_entry(dev->cir_buff,dev->tmp_entry);
         if (delete_item != NULL){
@@ -189,7 +189,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     retval = count;
     //mutex_unlock(&dev->lock);
     //--------------//
-    out:
+    
         mutex_unlock(&dev->lock);
         return retval;
 }
