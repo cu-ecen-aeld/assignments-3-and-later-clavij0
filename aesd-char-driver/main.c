@@ -167,7 +167,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         //aesd_circular_buffer_add_entry(dev->cir_buff,dev->tmp_entry);
         if (delete_item != NULL){
             
-			PDEBUG("Deleted entry %s",delete_item);
+			PDEBUG("Deleted entry %s",dev->buffer_entry.size,delete_item);
             PDEBUG("Data Deleted size: %zu", dev->buffer_entry.size);
 			kfree(delete_item);
 		}	
