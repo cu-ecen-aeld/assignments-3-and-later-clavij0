@@ -166,8 +166,6 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         if (delete_item != NULL){
 			PDEBUG("Deleted entry %s", delete_item);
 			kfree(delete_item);
-            dev->buffer_entry.buffptr = NULL;
-            dev->buffer_entry.size = 0;
 		}	
         //once we detect the /n we reset the value of buffptr and size to get the next text.
          dev->buffer_entry.buffptr = NULL;
@@ -181,7 +179,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     //*f_pos +=count;
     
     retval = count;
-    mutex_unlock(&dev->lock);
+    //mutex_unlock(&dev->lock);
     //--------------//
     out:
         mutex_unlock(&dev->lock);
