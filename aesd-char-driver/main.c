@@ -117,7 +117,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
   
     ssize_t retval = -ENOMEM;
     struct aesd_dev *dev = filp->private_data;
-     char *p;
+    char *p;
+    size_t newl_counter;
     //const char *new_entry;
 
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
@@ -157,8 +158,10 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     dev->buffer_entry.size += count;
     PDEBUG("dev->buffer_entry.size %zu",dev->buffer_entry.size );
 
-    if ( p = strchr(dev->buffer_entry.buffptr,'\n') != NULL){
+    //if (strchr(dev->buffer_entry.buffptr,'\n') != NULL){
+    if ((dev->buffer_entry.size-1) == '\n'){
         //*p = '\0';
+        newl_counter++;
         PDEBUG("Newline character detected");
         
         const char *delete_item = aesd_circular_buffer_add_entry(&dev->cir_buff,&dev->buffer_entry);
