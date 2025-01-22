@@ -171,6 +171,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
          dev->buffer_entry.buffptr = NULL;
          dev->buffer_entry.size = 0;
 
+    }else{
+        PDEBUG("Partial data remains uncommitted, size: %zu", dev->buffer_entry.size);
     }
     
     
