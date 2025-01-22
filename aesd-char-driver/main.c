@@ -137,6 +137,10 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	dev->buffer_entry.buffptr = krealloc(dev->buffer_entry.buffptr,dev->buffer_entry.size + count,GFP_KERNEL);
 
     if(!dev->buffer_entry.buffptr){
+        PDEBUG("No longer needed");
+        kfree(dev->buffer_entry.buffptr);
+        dev->buffer_entry.buffptr = NULL;
+        dev->buffer_entry.size = 0;
         goto out;
     }
     // memset(dev->charbuff,0,count*sizeof(char *));
@@ -164,8 +168,9 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 			kfree(delete_item);
 		}	
         //once we detect the /n we reset the value of buffptr and size to get the next text.
-        dev->buffer_entry.buffptr = NULL;
-        dev->buffer_entry.size = 0;
+         dev->buffer_entry.buffptr = NULL;
+         dev->buffer_entry.size = 0;
+
     }
     
     

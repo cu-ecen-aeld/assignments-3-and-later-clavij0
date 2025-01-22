@@ -74,47 +74,47 @@ const char *aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, 
     */
    //Check if in_offs and out_offs are in the same location to change the status of buffer->full
 
-const char* retval = NULL;
+// const char* retval = NULL;
 
-	if (buffer->full && (buffer->in_offs == buffer->out_offs)){
-		retval = buffer->entry[buffer->out_offs].buffptr;
-		buffer->out_offs = (buffer->out_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
-	}
+// 	if (buffer->full && (buffer->in_offs == buffer->out_offs)){
+// 		retval = buffer->entry[buffer->out_offs].buffptr;
+// 		buffer->out_offs = (buffer->out_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+// 	}
 
-	buffer->entry[buffer->in_offs++] = *add_entry;
+// 	buffer->entry[buffer->in_offs++] = *add_entry;
 
-	if (buffer->in_offs == AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED){
-		buffer->full = true;
-		buffer->in_offs = 0;
-	}
+// 	if (buffer->in_offs == AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED){
+// 		buffer->full = true;
+// 		buffer->in_offs = 0;
+// 	}
 
-	return retval;
+// 	return retval;
 
 
 
    
-//    const char* retval = NULL;
+   const char* retval = NULL;
    
 
-//    if(buffer->full){
-//     retval = buffer->entry[buffer->out_offs].buffptr; // Save the pointer to the overwritten data, it is returned TO aesd_write to check the NULL pointer
-//     buffer->out_offs = (buffer->out_offs+1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
-//    }
+   if(buffer->full){
+    retval = buffer->entry[buffer->out_offs].buffptr; // Save the pointer to the overwritten data, it is returned TO aesd_write to check the NULL pointer
+    buffer->out_offs = (buffer->out_offs+1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+   }
    
-//    //Add add new entry to the circular buffer untill full "in_offs=rear=write"
-//    buffer->entry[buffer->in_offs]= *add_entry;
+   //Add add new entry to the circular buffer untill full "in_offs=rear=write"
+   buffer->entry[buffer->in_offs]= *add_entry;
     
-//    if((buffer->in_offs +1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED == buffer->out_offs){
-//         buffer->full=true;
-//    }
+   if((buffer->in_offs +1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED == buffer->out_offs){
+        buffer->full=true;
+   }
 
-//    // Update position of in_offs
-//    buffer->in_offs = (buffer->in_offs + 1 ) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+   // Update position of in_offs
+   buffer->in_offs = (buffer->in_offs + 1 ) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
    
 
-//    return retval;
+   return retval;
 
-// }
+}
 
 /**
 * Initializes the circular buffer described by @param buffer to an empty struct
