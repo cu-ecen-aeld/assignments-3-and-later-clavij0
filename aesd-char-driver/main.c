@@ -172,7 +172,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         //once we detect the /n we reset the value of buffptr and size to get the next text.
         // dev->buffer_entry.buffptr = NULL;
          //dev->buffer_entry.size = 0;
-         		memset(&dev->c_buffer_entry, 0, sizeof(struct aesd_buffer_entry));
+         		memset(&dev->cir_buffer_entry, 0, sizeof(struct aesd_buffer_entry));
 
 
     }else{
