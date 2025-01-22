@@ -168,7 +168,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         if (delete_item != NULL){
             //char temp[dev->buffer_entry.size+1];
             size_t lenght = strlen(delete_item);
-			PDEBUG("Deleted entry %.*s",strlen(delete_item),delete_item);
+			PDEBUG("Deleted entry %.*s",sizeof(delete_item),delete_item);
             PDEBUG("Data Deleted size: %zu", dev->buffer_entry.size);
 			kfree(delete_item);
 		}	
