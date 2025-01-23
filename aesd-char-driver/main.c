@@ -138,6 +138,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 
 	dev->buffer_entry.buffptr = krealloc(dev->buffer_entry.buffptr,dev->buffer_entry.size + count,GFP_KERNEL);
 
+
     if(!dev->buffer_entry.buffptr){
         PDEBUG("No longer needed");
         kfree(dev->buffer_entry.buffptr);
@@ -156,7 +157,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     //Update dev->buffer_entry.size ya que una vez tengamos una parte del texto recibido como "write" teemos que aumentarle a size ese tamaño de texto hasta que llegue el /n , cuando enviemos el 
     // echo "5" > dev/aesdchar nuestro pasará directamente a la función (strchr(dev->buffer_entry.buffptr,'\n') 
     dev->buffer_entry.size += count;
-    PDEBUG("dev->buffer_entry.size %zu",dev->buffer_entry.size );
+    PDEBUG("OUT \n dev->buffer_entry.size %zu",dev->buffer_entry.size );
+    PDEBUG("OUT \n BEFORE add entry %.*s",dev->buffer_entry.size, dev->buffer_entry.buffptr);
 
     if (strchr(dev->buffer_entry.buffptr,'\n') != NULL){
     //if ((dev->buffer_entry.size) == '\n'){
@@ -175,14 +177,15 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 			kfree(delete_item);
 		}	
         //once we detect the /n we reset the value of buffptr and size to get the next text.
-        dev->buffer_entry.buffptr = NULL;
+        kfree(dev->buffer_entry.buffptr);
+        //dev->buffer_entry.buffptr = NULL;
         dev->buffer_entry.size = 0;
         
 
     }else{
         PDEBUG("Partial data remains uncommitted, size: %zu", dev->buffer_entry.size);
     }
-    
+        
     
     //*f_pos +=count;
     
