@@ -30,7 +30,6 @@ MODULE_AUTHOR("clavij0"); /** TODO: fill in your name **/
 MODULE_LICENSE("Dual BSD/GPL");
 
 struct aesd_dev *aesd_device;
-    int newl_counter;
 
 int aesd_open(struct inode *inode, struct file *filp)
 {
@@ -157,28 +156,36 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     //Update dev->buffer_entry.size ya que una vez tengamos una parte del texto recibido como "write" teemos que aumentarle a size ese tamaño de texto hasta que llegue el /n , cuando enviemos el 
     // echo "5" > dev/aesdchar nuestro pasará directamente a la función (strchr(dev->buffer_entry.buffptr,'\n') 
     dev->buffer_entry.size += count;
-    PDEBUG("OUT  dev->buffer_entry.size %zu",dev->buffer_entry.size );
-    PDEBUG("OUT  BEFORE add entry %.*s",dev->buffer_entry.size, dev->buffer_entry.buffptr);
+    //PDEBUG("OUT  dev->buffer_entry.size %zu",dev->buffer_entry.size );
+    //PDEBUG("OUT  BEFORE add entry %.*s",dev->buffer_entry.size, dev->buffer_entry.buffptr);
     
     size_t size = dev->buffer_entry.size;
     if (size > 0 && dev->buffer_entry.buffptr[size - 1] == '\n') {
         PDEBUG("Newline detected without adding null terminator");
     }
+    /*BE AWARE: This code allows me to be sure that at the end of each echo we have '\0' null-terminated,
+      and avoid error when is not sent the '\n'.
+      Issue: The driver might be detecting \n in the write operation, even when it doesn't exist
+      , due to uninitialized memory or incorrect handling of strchr.
+      ==> Ensure that the buffer_entry.buffptr is null-terminated before calling strchr, as this 
+      function depends on a null-terminated string. Otherwise, it might misinterpret memory contents 
+      and lead to unexpected newline detections.
+
+    */
     dev->buffer_entry.buffptr[dev->buffer_entry.size] = '\0';
     PDEBUG("Buffer content before strchr: %.*s", (int)dev->buffer_entry.size, dev->buffer_entry.buffptr);
 
     if (strchr(dev->buffer_entry.buffptr,'\n') != NULL){
-        newl_counter++;
         PDEBUG("Newline character detected");
         
-        const char *delete_item = aesd_circular_buffer_add_entry(&dev->cir_buff,&dev->buffer_entry);
-        PDEBUG("nEWLINE COUNTER %d\n",newl_counter);
-        PDEBUG("Added entry  %.*s",dev->buffer_entry.size, dev->buffer_entry.buffptr);
+        const char *remove_strchr = aesd_circular_buffer_add_entry(&dev->cir_buff,&dev->buffer_entry);
+        //PDEBUG("nEWLINE COUNTER %d\n",newl_counter);
+        //PDEBUG("Added entry  %.*s",dev->buffer_entry.size, dev->buffer_entry.buffptr);
         //aesd_circular_buffer_add_entry(dev->cir_buff,dev->tmp_entry);
-        if (delete_item != NULL){
+        if (remove_strchr  != NULL){
             
-            PDEBUG("Deleted entry 2: %.*s",dev->buffer_entry.size,delete_item);
-            PDEBUG("Data Deleted size 2: %zu", dev->buffer_entry.size);
+            PDEBUG("Remove entry : %.*s",dev->buffer_entry.size,remove_strchr );
+            PDEBUG("Data Removed size : %zu", dev->buffer_entry.size);
             
 			kfree(delete_item);
 		}	
@@ -186,7 +193,6 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         //kfree(dev->buffer_entry.buffptr);
         dev->buffer_entry.buffptr = NULL;
         dev->buffer_entry.size = 0;
-        
 
     }else{
         PDEBUG("Partial data remains uncommitted, size: %zu", dev->buffer_entry.size);
@@ -198,7 +204,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     retval = count;
     //mutex_unlock(&dev->lock);
     //--------------//
-    
+    out:
         mutex_unlock(&dev->lock);
         return retval;
 }
@@ -280,10 +286,6 @@ int aesd_init_module(void)
         return result;
 
 }
-
-
-
-
 
 module_init(aesd_init_module);
 module_exit(aesd_cleanup_module);
