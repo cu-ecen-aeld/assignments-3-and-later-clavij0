@@ -164,8 +164,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     if (size > 0 && dev->buffer_entry.buffptr[size - 1] == '\n') {
         PDEBUG("Newline detected without adding null terminator");
     }
-    //dev->buffer_entry.buffptr[dev->buffer_entry.size] = '\0';
-    //PDEBUG("Buffer content before strchr: %.*s", (int)dev->buffer_entry.size, dev->buffer_entry.buffptr);
+    dev->buffer_entry.buffptr[dev->buffer_entry.size] = '\0';
+    PDEBUG("Buffer content before strchr: %.*s", (int)dev->buffer_entry.size, dev->buffer_entry.buffptr);
 
     if (strchr(dev->buffer_entry.buffptr,'\n') != NULL){
         newl_counter++;
