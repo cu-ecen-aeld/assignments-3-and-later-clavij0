@@ -161,7 +161,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     PDEBUG("OUT  BEFORE add entry %.*s",dev->buffer_entry.size, dev->buffer_entry.buffptr);
 
     dev->buffer_entry.buffptr[dev->buffer_entry.size] = '\0';
-    PDEBUG("Buffer content before strchr: %.*s", (size_t)dev->buffer_entry.size, dev->buffer_entry.buffptr);
+    //PDEBUG("Buffer content before strchr: %.*s", (size_t)dev->buffer_entry.size, dev->buffer_entry.buffptr);
 
     if (strchr(dev->buffer_entry.buffptr,'\n') != NULL){
     //if ((dev->buffer_entry.size) == '\n'){
