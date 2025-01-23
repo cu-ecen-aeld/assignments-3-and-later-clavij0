@@ -179,7 +179,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         //once we detect the /n we reset the value of buffptr and size to get the next text.
         kfree(dev->buffer_entry.buffptr);
         //dev->buffer_entry.buffptr = NULL;
-        dev->buffer_entry.size = 0;
+        //dev->buffer_entry.size = 0;
         
 
     }else{
