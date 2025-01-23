@@ -173,7 +173,10 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         if (delete_item != NULL){
             //char temp[dev->buffer_entry.size+1];
 			PDEBUG("Deleted entry %.*s",sizeof(delete_item),delete_item);
-            PDEBUG("Data Deleted size: %zu", dev->buffer_entry.size);
+            PDEBUG("Data Deleted size: %zu", sizeof(delete_item));
+            PDEBUG("Deleted entry 2%.*s",dev->buffer_entry.size,delete_item);
+            PDEBUG("Data Deleted size 2: %zu", dev->buffer_entry.size);
+            
 			kfree(delete_item);
 		}	
         //once we detect the /n we reset the value of buffptr and size to get the next text.
