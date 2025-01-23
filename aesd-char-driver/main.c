@@ -159,13 +159,15 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     dev->buffer_entry.size += count;
     PDEBUG("OUT  dev->buffer_entry.size %zu",dev->buffer_entry.size );
     PDEBUG("OUT  BEFORE add entry %.*s",dev->buffer_entry.size, dev->buffer_entry.buffptr);
-
-    dev->buffer_entry.buffptr[dev->buffer_entry.size] = '\0';
-    //PDEBUG("Buffer content before strchr: %.*s", (size_t)dev->buffer_entry.size, dev->buffer_entry.buffptr);
+    
+    size_t size = dev->buffer_entry.size;
+    if (size > 0 && dev->buffer_entry.buffptr[size - 1] == '\n') {
+        PDEBUG("Newline detected without adding null terminator");
+    }
+    //dev->buffer_entry.buffptr[dev->buffer_entry.size] = '\0';
+    //PDEBUG("Buffer content before strchr: %.*s", (int)dev->buffer_entry.size, dev->buffer_entry.buffptr);
 
     if (strchr(dev->buffer_entry.buffptr,'\n') != NULL){
-    //if ((dev->buffer_entry.size) == '\n'){
-        //*p = '\0';
         newl_counter++;
         PDEBUG("Newline character detected");
         
@@ -174,9 +176,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         PDEBUG("Added entry  %.*s",dev->buffer_entry.size, dev->buffer_entry.buffptr);
         //aesd_circular_buffer_add_entry(dev->cir_buff,dev->tmp_entry);
         if (delete_item != NULL){
-            //char temp[dev->buffer_entry.size+1];
-			//PDEBUG("Deleted entry %.*s",sizeof(delete_item),delete_item);
-            //PDEBUG("Data Deleted size: %zu", sizeof(delete_item));
+            
             PDEBUG("Deleted entry 2: %.*s",dev->buffer_entry.size,delete_item);
             PDEBUG("Data Deleted size 2: %zu", dev->buffer_entry.size);
             
