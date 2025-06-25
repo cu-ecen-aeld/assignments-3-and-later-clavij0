@@ -19,6 +19,8 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <pthread.h>
+#include <sys/ioctl.h>
+#include "../aesd-char-driver/aesd_ioctl.h"
 
 #define PORT "9000"  // the port users will be connecting to
 
@@ -237,8 +239,12 @@ void *parnert_handler(void *thread_param){
     char *ptr = NULL;
     FILE * fptr;
 
+    unsigned int write_wd;
+    unsigned int write_offset;
+    struct aesd_seekto seekto;
+
     while(1){
-        
+        printf("vuelta al mundo \n");
         numbytes = recvfrom(thread_func_args->new_fd, buf, MAXBUFLEN-1 , 0,(struct sockaddr *)&thread_func_args->their_addr, &thread_func_args->addr_size);        
 
         if (numbytes == -1){
@@ -278,71 +284,118 @@ void *parnert_handler(void *thread_param){
             syslog(LOG_ERR,"Failed Memory not allocated.");
             exit(0);
         }
-
+        buf[numbytes]='\0';
         memcpy(ptr,buf, numbytes);//dont forget to c&p the buf recv to the alloc memory
+       // buf[numbytes] = '\0';
+        //syslog(LOG_INFO,"Received %d bytes: %.*s",numbyte,numbytes,buf);
 
-        fptr = fopen(FILE_NAME, "w+"); 
-   
-        if (fptr != NULL){
-            syslog(LOG_INFO, "Correctly entered arguments");
-            
-        }else{
-            syslog(LOG_ERR,"Missing Filename and Text");        
-        }
-       
-
-        if( fwrite (ptr,sizeof(char),numbytes,fptr) < numbytes){
-            syslog(LOG_ERR,"Could not write into FD %s\n", strerror(errno));
-        }
-
-        //printf("Written to file: %s\n", ptr);
-        
-        if (fclose(fptr) == EOF){
-            syslog(LOG_ERR,"Error Closing FD\n");
-        }else{
-            syslog(LOG_INFO,"Success clossing\n");
-        }
-
-        if(strchr(ptr,'\n')){
-            syslog(LOG_INFO,"Inside ptr\n");
-
-            char file_buf[MAXBUFLEN]={0};
-            int read_bytes;
-
+        //--------------ASSIGNMENT 9 BEGINING-----------//
+        // Hasta el byte 19 quiero asegurarme que tiene los :
+        if(strncmp(ptr,"AESDCHAR_IOCSEEKTO:", 19)==0){
+            printf("Command AESDCHAR_IOCSEEKTO detected\n");
+            syslog(LOG_INFO, "Detected AESDCHAR_IOCSEEKTO command");
             fptr = fopen(FILE_NAME, "r+"); 
+            int fd = fileno(fptr);
 
-            if (!fptr) {
-            syslog(LOG_ERR,"File is not opened %s",strerror(errno));
-            fptr = fopen(FILE_NAME, "a+");
-                if (!fptr) {
-                    perror("Failed to open file");
-                    exit(EXIT_FAILURE);
-                }
+            if(sscanf(ptr,"AESDCHAR_IOCSEEKTO:%u,%u",&write_wd,&write_offset)==2){
+                seekto.write_cmd = write_wd;
+                seekto.write_cmd_offset = write_offset;
+                printf("write_wd %u write_cmd_offset %u \n",seekto.write_cmd , seekto.write_cmd_offset);
             }
-            while ((read_bytes = fread(file_buf, sizeof(char), numbytes,fptr)) > 0) {
-                syslog(LOG_INFO,"Read bytes\n");
+            if(ioctl(fd,AESDCHAR_IOCSEEKTO,&seekto)<0){
+                syslog(LOG_ERR,"ioctl AESDCHAR_IOCSEEKTO %s",strerror(errno));    
 
-                if (send(thread_func_args->new_fd, file_buf,read_bytes, 0) < 0){
-                    syslog(LOG_ERR,"Send action failed");
-                    break;
-                } 
-                if(pthread_mutex_unlock(&log_mutex) != 0){
+            }else{
+                //Read since the given position
+                char file_buf[MAXBUFLEN]={0};
+                int read_bytes = 0;
+                read_bytes = fread(file_buf,sizeof(char),numbytes,fptr);
+
+                if (read_bytes > 0){
+                    if(send(thread_func_args->new_fd,file_buf,read_bytes,0)<0){
+                        syslog(LOG_ERR,"Send failed %s",strerror(errno));
+                    }
+                    if(pthread_mutex_unlock(&log_mutex) != 0){
                     perror("Unable to unlock pthread_mutex");
+                    }else{
+                        printf("OUT MUTEXT 2\n");
+                        syslog(LOG_INFO,"OUT MUTEXT 2\n"); //Just for my control
+                    }
                 }else{
-                    printf("OUT MUTEXT 2\n");
-                    syslog(LOG_INFO,"OUT MUTEXT 2\n"); //Just for my control
+                    syslog(LOG_ERR, "Read failed after ioctl: %s", strerror(errno));
                 }
+
+               
+            }
+        free(ptr);   
+        printf("Salida ioctl()\n");
+        fclose(fptr);
+        //--------------ASSIGNMENT 9 FINISH-----------//
+        }else{
+            fptr = fopen(FILE_NAME, "w+"); 
+   
+            if (fptr != NULL){
+                syslog(LOG_INFO, "Correctly entered arguments");
+                
+            }else{
+                syslog(LOG_ERR,"Missing Filename and Text");        
+            }
+        
+            if( fwrite (ptr,sizeof(char),numbytes,fptr) < numbytes){
+                syslog(LOG_ERR,"Could not write into FD %s\n", strerror(errno));
             }
 
-            free(ptr);   
-            printf("Salida 1\n");
-            fclose(fptr);
-        }else{
-            printf("Detected long_file.txt\n");
-            pthread_mutex_unlock(&log_mutex);
-        }
+            //printf("Written to file: %s\n", ptr);
+            
+            if (fclose(fptr) == EOF){
+                syslog(LOG_ERR,"Error Closing FD\n");
+            }else{
+                syslog(LOG_INFO,"Success clossing\n");
+            }
 
-    }
+            if(strchr(ptr,'\n')){
+                syslog(LOG_INFO,"Inside ptr\n");
+
+                char file_buf[MAXBUFLEN]={0};
+                int read_bytes;
+
+                fptr = fopen(FILE_NAME, "r+"); 
+
+                if (!fptr) {
+                syslog(LOG_ERR,"File is not opened %s",strerror(errno));
+                fptr = fopen(FILE_NAME, "a+");
+                    if (!fptr) {
+                        perror("Failed to open file");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                //Aquí empezar a escribir los datos nuevos.
+
+                while ((read_bytes = fread(file_buf, sizeof(char), numbytes,fptr)) > 0) {
+                    syslog(LOG_INFO,"Read bytes\n");
+
+                    if (send(thread_func_args->new_fd, file_buf,read_bytes, 0) < 0){
+                        syslog(LOG_ERR,"Send action failed");
+                        break;
+                    } 
+                    if(pthread_mutex_unlock(&log_mutex) != 0){
+                        perror("Unable to unlock pthread_mutex");
+                    }else{
+                        printf("OUT MUTEXT 2\n");
+                        syslog(LOG_INFO,"OUT MUTEXT 2\n"); //Just for my control
+                    }
+                }
+
+                free(ptr);   
+                printf("Salida 1\n");
+                fclose(fptr);
+            }else{
+                printf("Detected long_file.txt\n");
+                pthread_mutex_unlock(&log_mutex);
+            }
+        }//end of else
+
+    }//end of while
       
     if (numbytes == 0) {
         printf("Client disconnected\n");
@@ -359,7 +412,7 @@ void *parnert_handler(void *thread_param){
 
 int main (int argc, char *argv[]){
     
-    int daemon_mode = 1;
+    int daemon_mode = 0;
 
     // Parse command line arguments
     if (argc == 2 && strcmp(argv[1], "-d") == 0) {
@@ -421,7 +474,7 @@ int main (int argc, char *argv[]){
         }
         
         if(setsockopt(sockett,SOL_SOCKET, SO_REUSEADDR,&yes,sizeof yes)==-1){
-            perror("setsockopt");
+            perror("setsockopt(SO_REUSEADDR) failed");
             exit(1);
         }
 

@@ -22,6 +22,7 @@
 #include <linux/uaccess.h>	/* copy_*_user */
 
 #include "aesdchar.h"
+#include "aesd_ioctl.h"
 
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
@@ -143,7 +144,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         kfree(dev->buffer_entry.buffptr);
         dev->buffer_entry.buffptr = NULL;
         dev->buffer_entry.size = 0;
-       // goto out;
+        goto out;
     }
  
 
@@ -163,7 +164,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     if (size > 0 && dev->buffer_entry.buffptr[size - 1] == '\n') {
         PDEBUG("Newline detected without adding null terminator");
     }
-    /*BE AWARE: This code allows me to be sure that at the end of each echo we have '\0' null-terminated,
+    /*BE AWARE: This chunk of code allows me to be sure that at the end of each echo we have '\0' null-terminated,
       and avoid error when is not sent the '\n'.
       Issue: The driver might be detecting \n in the write operation, even when it doesn't exist
       , due to uninitialized memory or incorrect handling of strchr.
@@ -182,6 +183,14 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         //PDEBUG("nEWLINE COUNTER %d\n",newl_counter);
         //PDEBUG("Added entry  %.*s",dev->buffer_entry.size, dev->buffer_entry.buffptr);
         //aesd_circular_buffer_add_entry(dev->cir_buff,dev->tmp_entry);
+
+        // Assignment 9 track the buffer
+        // ========== ENTRY COUNT UPDATE START ========== //
+        if (!dev->cir_buff.full) {
+            dev->cir_buff.entry_count++;
+        }
+        // ========== ENTRY COUNT UPDATE END ========== //
+
         if (remove_strchr  != NULL){
             
             PDEBUG("Remove entry : %.*s",dev->buffer_entry.size,remove_strchr );
@@ -209,6 +218,124 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         return retval;
 }
 
+long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
+
+    struct aesd_dev *dev = filp->private_data;
+    struct aesd_seekto seek_cmd_paramts;
+    struct aesd_buffer_entry *entry; // Create a local copy to know and validate the offset of the command
+    int retval=0;
+    size_t new_pos = 0;
+
+    
+    switch (cmd)
+    {
+    case AESDCHAR_IOCSEEKTO:
+        /* code */
+                          //&seek_cmd the address of the struct we are gonna copy the arguments
+                          // (struct seek_cmd *)arg Source address in user space the arguments recieved from the userspace, and must be cast with *arg since are "unsined long arg"
+                          // sizeof(seek_cmd_params, size of the struct to be copied.
+        if (copy_from_user(&seek_cmd_paramts,(struct seek_cmd *)arg,sizeof(seek_cmd_paramts)))
+            return -EFAULT;
+        
+        mutex_lock(&dev->lock);
+
+        /**
+         * @brief 
+         * Check the write_cmd is in the boundeirs of the already commands writed if it is not send to goto
+         * I'm assuming the cir_buffer is not always full with 10 -> "AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED=10" so thats the reason to create
+         * the  entry_count
+         */
+        
+        if(seek_cmd_paramts.write_cmd >= dev->cir_buff.entry_count ){
+            retval = -EINVAL;
+            goto out;
+        }
+
+        // Get the buffer entry locally to check if offset exist inside the entry
+        entry = &dev->cir_buff.entry[(dev->cir_buff.out_offs + seek_cmd_paramts.write_cmd ) 
+                                        % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED];
+
+        // Validate write_cmd_offset with the specific entry->size of the write_cmd
+        if (seek_cmd_paramts.write_cmd_offset >= entry->size) { 
+            retval = -EINVAL;
+            goto out;
+        }
+
+        // Calculate new file position
+        for(int i =0; i < seek_cmd_paramts.write_cmd;i++){
+            struct aesd_buffer_entry *get_size = &dev->cir_buff.entry[(dev->cir_buff.out_offs+i)%AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED];
+            new_pos += get_size->size;
+        }
+        //Here we add the get_size->size of each cmd and sume the offset "write_cmd_offset"
+        new_pos += seek_cmd_paramts.write_cmd_offset;
+    
+        // Update file position
+        filp->f_pos = new_pos;
+
+        break;
+    
+    default:
+    return -EINVAL;
+        break;
+    }
+
+    out:
+        mutex_unlock(&dev->lock);
+        return retval;
+}
+
+size_t aesd_circular_buffer_full_size(struct aesd_circular_buffer *buffer_size){
+    size_t total_size = 0;
+    uint8_t index = buffer_size->out_offs; //Comienza desde el elemento más antiguo
+                                               //No siempre empieza en la posición 0 del buffer.
+
+    for (int i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++)
+    {
+        if(buffer_size->entry[i].buffptr != NULL)
+            total_size += buffer_size->entry[i].size;
+        
+        index = (index +1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; //this % ensures the Wrap-Around 
+    }
+    return total_size;
+}
+
+static loff_t aesd_llseek(struct file *filp, loff_t offset, int whence) {
+    struct aesd_dev *dev = filp->private_data;
+    loff_t newpos;
+    size_t file_size;
+
+    mutex_lock(&dev->lock);
+    file_size = aesd_circular_buffer_full_size(&dev->cir_buff); // Obtiene tamaño actual bajo mutex
+                                                            //Dentro del circular Buffer
+    //Avoid race condition
+    mutex_unlock(&dev->lock);
+
+    switch (whence) {
+    case SEEK_SET: // Desde inicio del archivo
+        newpos = offset; //siempre arranca en cero este archivo
+        break;
+    case SEEK_CUR: // Desde posición actual
+        newpos = filp->f_pos + offset;
+        break;
+    case SEEK_END: // Desde final del archivo
+        newpos = file_size + offset;
+        break;
+    default:
+        return -EINVAL; // Tipo de seek inválido
+    }
+
+    // No permitir posiciones negativas
+    if (newpos < 0) 
+        return -EINVAL;
+    
+    //Avoid EOF to increse more beyon the total size of the buffer
+    if (newpos > file_size)
+        newpos=file_size;
+
+
+    filp->f_pos = newpos; // Actualiza posición en el archivo
+    return newpos;
+}
 
 struct file_operations aesd_fops = {
     .owner =    THIS_MODULE,
@@ -216,6 +343,8 @@ struct file_operations aesd_fops = {
     .write =    aesd_write,
     .open =     aesd_open,
     .release =  aesd_release,
+    .llseek =   aesd_llseek, // Assigment 9
+    .unlocked_ioctl = aesd_ioctl, // Assigment 9
 };
 
 static int aesd_setup_cdev(struct aesd_dev *dev)

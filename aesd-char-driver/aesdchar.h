@@ -37,7 +37,7 @@ struct aesd_dev
     // char charbuff[BUFFER_SIZE];
     // size_t read_offset = 0;
     // size_t write_offset = 0;
-    // size_t buffer_size = 0;
+    size_t total_buffer_size; //assignment 9, total size of file
     
     struct aesd_buffer_entry buffer_entry;
     struct aesd_circular_buffer cir_buff; 
