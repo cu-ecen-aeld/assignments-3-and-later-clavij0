@@ -41,7 +41,7 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     //printk("out_offset %u", out_offset);
     //printk("char_offset %lu",char_offset);
     //Set bounderi of the circle buffer AESDCHAR_MAX.....
-    printk("aesd_circular_buffer_find buffer->entry_count %u",  buffer->entry_count);
+    //printk("aesd_circular_buffer_find buffer->entry_count %u",  buffer->entry_count);
     for (int i =0 ; i < buffer->entry_count; i++){
         //printk("buffer %s e i++ %d\n",buffer->entry[out_offset].buffptr, i);
 

@@ -79,7 +79,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
     struct aesd_buffer_entry *entry = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->cir_buff, *f_pos, &entry_offset);
 
-   	mutex_unlock(&dev->lock);
+   	//mutex_unlock(&dev->lock);
 
     if (entry != NULL){
 		// unread_bytes = entry->size - entry_offset;
@@ -93,15 +93,22 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
         PDEBUG ("Current 2 Post %lld, entry_offset %zu \n",current_pos, entry_offset);
         //printk(KERN_INFO "bytes_to_copy: %zu\n", bytes_to_copy);
         //printk(KERN_INFO "count: %zu\n", count);
+        
+        //Validar entry->buffptr no sea NULL
+        if (entry->buffptr == NULL) {
+            PDEBUG("entry->buffptr is NULL");
+            return -EFAULT;
+        }
 
 
-		PDEBUG("Reading message %.*s of size %zu", bytes_to_copy, entry->buffptr + entry_offset, bytes_to_copy);
+		//PDEBUG("Reading message %.*s of size %zu", bytes_to_copy, entry->buffptr + entry_offset, bytes_to_copy);
 		if (copy_to_user(buf, entry->buffptr + entry_offset, bytes_to_copy)){
 			return -EINTR;
 		}
         // *f_pos += bytes_to_copy; update the pointer position for the next reading
 		*f_pos += bytes_to_copy;
 		retval = bytes_to_copy;
+        mutex_unlock(&dev->lock);
 	}else{
         PDEBUG("NO DATA TO READ");
     }
@@ -109,7 +116,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
     //retval = count;
    // out:
-   //     mutex_unlock(&dev->lock);
+        mutex_unlock(&dev->lock);
         return retval;
 }
 
