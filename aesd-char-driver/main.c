@@ -103,12 +103,12 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
 		//PDEBUG("Reading message %.*s of size %zu", bytes_to_copy, entry->buffptr + entry_offset, bytes_to_copy);
 		if (copy_to_user(buf, entry->buffptr + entry_offset, bytes_to_copy)){
+            mutex_unlock(&dev->lock);
 			return -EINTR;
 		}
         // *f_pos += bytes_to_copy; update the pointer position for the next reading
 		*f_pos += bytes_to_copy;
 		retval = bytes_to_copy;
-        mutex_unlock(&dev->lock);
 	}else{
         PDEBUG("NO DATA TO READ");
     }
@@ -116,8 +116,8 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
     //retval = count;
    // out:
-        //mutex_unlock(&dev->lock);
-        return retval;
+    mutex_unlock(&dev->lock);
+    return retval;
 }
 
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
