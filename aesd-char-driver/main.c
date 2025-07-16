@@ -116,7 +116,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
     //retval = count;
    // out:
-        mutex_unlock(&dev->lock);
+        //mutex_unlock(&dev->lock);
         return retval;
 }
 
