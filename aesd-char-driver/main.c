@@ -66,7 +66,8 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     size_t unread_bytes;
     size_t read_size;
     size_t bytes_to_copy;
-
+    loff_t current_pos = filp->f_pos;
+    PDEBUG ("Current Post %lld\n",current_pos);
     struct aesd_dev *dev = filp->private_data;
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
     /**
@@ -88,12 +89,13 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
         // printk(KERN_INFO "entry_offset: %zu\n", entry_offset);
 
         bytes_to_copy = min(entry->size - entry_offset, count);
-
+        
+        PDEBUG ("Current 2 Post %lld, entry_offset %zu \n",current_pos, entry_offset);
         //printk(KERN_INFO "bytes_to_copy: %zu\n", bytes_to_copy);
         //printk(KERN_INFO "count: %zu\n", count);
 
 
-		//PDEBUG("Reading message %.*s of size %zu", bytes_to_copy, entry->buffptr + entry_offset, bytes_to_copy);
+		PDEBUG("Reading message %.*s of size %zu", bytes_to_copy, entry->buffptr + entry_offset, bytes_to_copy);
 		if (copy_to_user(buf, entry->buffptr + entry_offset, bytes_to_copy)){
 			return -EINTR;
 		}
@@ -120,7 +122,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     struct aesd_dev *dev = filp->private_data;
     //char *p;
     //const char *new_entry;
-
+    //dev->cir_buff.entry_count = 1;
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
     /**
      * TODO: handle write
@@ -188,13 +190,21 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         // ========== ENTRY COUNT UPDATE START ========== //
         if (!dev->cir_buff.full) {
             dev->cir_buff.entry_count++;
-        }
+            PDEBUG("DENTRO if(!dev->cir_buff.entry_count) %u",  dev->cir_buff.entry_count);
+            if(dev->cir_buff.entry_count >= AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED){
+                PDEBUG("FULL buffer %u",  dev->cir_buff.entry_count);
+                dev->cir_buff.entry_count = AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+                dev->cir_buff.full = true;
+            }
+         }
+        PDEBUG("dev->cir_buff.entry_count %u",  dev->cir_buff.entry_count);
+        
         // ========== ENTRY COUNT UPDATE END ========== //
 
         if (remove_strchr  != NULL){
             
-            PDEBUG("Remove entry : %.*s",dev->buffer_entry.size,remove_strchr );
-            PDEBUG("Data Removed size : %zu", dev->buffer_entry.size);
+            //PDEBUG("Remove entry : %.*s",dev->buffer_entry.size,remove_strchr );
+            //PDEBUG("Data Removed size : %zu", dev->buffer_entry.size);
             
 			kfree(remove_strchr);
 		}	
@@ -218,15 +228,14 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         return retval;
 }
 
-long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
+static long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 
     struct aesd_dev *dev = filp->private_data;
     struct aesd_seekto seek_cmd_paramts;
     struct aesd_buffer_entry *entry; // Create a local copy to know and validate the offset of the command
     int retval=0;
-    size_t new_pos = 0;
-
-    
+    size_t new_pos = 0; //Calcula la nueva posición
+    PDEBUG("Dentro de aesd_ioctl\n");
     switch (cmd)
     {
     case AESDCHAR_IOCSEEKTO:
@@ -234,6 +243,7 @@ long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
                           //&seek_cmd the address of the struct we are gonna copy the arguments
                           // (struct seek_cmd *)arg Source address in user space the arguments recieved from the userspace, and must be cast with *arg since are "unsined long arg"
                           // sizeof(seek_cmd_params, size of the struct to be copied.
+        PDEBUG("Dentro del CASE aesd_ioctl\n");
         if (copy_from_user(&seek_cmd_paramts,(struct seek_cmd *)arg,sizeof(seek_cmd_paramts)))
             return -EFAULT;
         
@@ -245,43 +255,69 @@ long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
          * I'm assuming the cir_buffer is not always full with 10 -> "AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED=10" so thats the reason to create
          * the  entry_count
          */
-        
+        // 1st Validate write_cmd is in the cir_buff AESDMAX_BUFFER < 10
         if(seek_cmd_paramts.write_cmd >= dev->cir_buff.entry_count ){
+            PDEBUG("EL valor de cmd es más grande que el cir_buff");
             retval = -EINVAL;
             goto out;
         }
+        //printf("dev->cir_buff.entry_count = dev->cir_buff.entry_count  %u = %lu\n", seek_cmd_paramts.write_cmd ,dev->cir_buff.entry_count );
 
         // Get the buffer entry locally to check if offset exist inside the entry
         entry = &dev->cir_buff.entry[(dev->cir_buff.out_offs + seek_cmd_paramts.write_cmd ) 
                                         % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED];
 
-        // Validate write_cmd_offset with the specific entry->size of the write_cmd
+        // 2nd Validate write_cmd_offset with the specific entry->size of the write_cmd
         if (seek_cmd_paramts.write_cmd_offset >= entry->size) { 
+            PDEBUG("Error tmaño del offset es mayor a la entrada\n");
             retval = -EINVAL;
             goto out;
         }
+        PDEBUG("seek_cmd_paramts.write_cmd_offset: %u  y entry->size: %lu, entry_count %u\n",seek_cmd_paramts.write_cmd_offset,entry->size,dev->cir_buff.entry_count);
+        // for (int i = 0; i < dev->cir_buff.entry_count; i++) {
+        //      PDEBUG("vERIFICACIÓN DE PASOS");
+        //     size_t index =(dev->cir_buff.out_offs+i) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+           
+        //     PDEBUG("Entry[%d] = %.*s", i, dev->cir_buff.entry[index].size , dev->cir_buff.entry[index].buffptr);  
+        // } 
 
-        // Calculate new file position
+        //3rd Calculate new file position
         for(int i =0; i < seek_cmd_paramts.write_cmd;i++){
             struct aesd_buffer_entry *get_size = &dev->cir_buff.entry[(dev->cir_buff.out_offs+i)%AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED];
             new_pos += get_size->size;
+            if(get_size->buffptr == NULL){
+                PDEBUG("goto ERROR get_size->buffptr == NULL\n");
+                retval = -EINVAL;
+                goto out;
+            }
+            PDEBUG("new position FOR %lu \n", new_pos);
+
         }
+
         //Here we add the get_size->size of each cmd and sume the offset "write_cmd_offset"
         new_pos += seek_cmd_paramts.write_cmd_offset;
-    
+        PDEBUG("new position + write_cmd_offset %lu \n", new_pos);
+        
         // Update file position
         filp->f_pos = new_pos;
-
+        PDEBUG("filp->f_pos %lu \n", filp->f_pos);
+        PDEBUG("retval interno %lu \n", retval);
         break;
     
     default:
-    return -EINVAL;
+        PDEBUG("No ingreso a aesd_ioctl Default Error\n");
+        return -EINVAL;
         break;
     }
 
+    PDEBUG("retval externo %lu \n", retval);
+    mutex_unlock(&dev->lock);
+    return retval;
+    
     out:
         mutex_unlock(&dev->lock);
         return retval;
+
 }
 
 size_t aesd_circular_buffer_full_size(struct aesd_circular_buffer *buffer_size){
@@ -291,11 +327,15 @@ size_t aesd_circular_buffer_full_size(struct aesd_circular_buffer *buffer_size){
 
     for (int i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++)
     {
-        if(buffer_size->entry[i].buffptr != NULL)
-            total_size += buffer_size->entry[i].size;
+        if(buffer_size->entry[index].buffptr != NULL)
+            total_size += buffer_size->entry[index].size;
         
+        PDEBUG("I     CIRCULAR BUFFER %u \n",i);
+        PDEBUG("INDEX CIRCULAR BUFFER %u \n",index);
         index = (index +1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; //this % ensures the Wrap-Around 
+        
     }
+    PDEBUG("RETURN CIRCULAR BUFFER %u \n",total_size);
     return total_size;
 }
 
@@ -307,23 +347,27 @@ static loff_t aesd_llseek(struct file *filp, loff_t offset, int whence) {
     mutex_lock(&dev->lock);
     file_size = aesd_circular_buffer_full_size(&dev->cir_buff); // Obtiene tamaño actual bajo mutex
                                                             //Dentro del circular Buffer
+    PDEBUG("sIZE OF THE CIRCULAR BUFFER %u \n", file_size);
     //Avoid race condition
     mutex_unlock(&dev->lock);
 
     switch (whence) {
     case SEEK_SET: // Desde inicio del archivo
         newpos = offset; //siempre arranca en cero este archivo
+        PDEBUG("Newpost SEEK_SET %u",newpos);
         break;
     case SEEK_CUR: // Desde posición actual
         newpos = filp->f_pos + offset;
+        PDEBUG("Newpost SEEK_CUR %u",newpos);
         break;
     case SEEK_END: // Desde final del archivo
         newpos = file_size + offset;
+        PDEBUG("Newpost SEEK_END %u",newpos);
         break;
     default:
         return -EINVAL; // Tipo de seek inválido
     }
-
+    
     // No permitir posiciones negativas
     if (newpos < 0) 
         return -EINVAL;
@@ -334,6 +378,7 @@ static loff_t aesd_llseek(struct file *filp, loff_t offset, int whence) {
 
 
     filp->f_pos = newpos; // Actualiza posición en el archivo
+    PDEBUG();
     return newpos;
 }
 

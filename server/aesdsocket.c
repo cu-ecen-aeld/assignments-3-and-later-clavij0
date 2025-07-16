@@ -234,7 +234,7 @@ void *parnert_handler(void *thread_param){
     syslog(LOG_INFO, "Accepted connection from %s", s);
     printf("Accepted connection from %s \n", s);
     // Receiving data
-    char buf[1024];
+    char buf[1024] = {0};
     int numbytes=0;   
     char *ptr = NULL;
     FILE * fptr;
@@ -282,63 +282,100 @@ void *parnert_handler(void *thread_param){
         if (ptr == NULL) {
             printf("Memory not allocated.\n");
             syslog(LOG_ERR,"Failed Memory not allocated.");
+            pthread_mutex_unlock(&log_mutex);
             exit(0);
         }
-        buf[numbytes]='\0';
+        
         memcpy(ptr,buf, numbytes);//dont forget to c&p the buf recv to the alloc memory
-       // buf[numbytes] = '\0';
+        ptr[numbytes] = '\0';
         //syslog(LOG_INFO,"Received %d bytes: %.*s",numbyte,numbytes,buf);
 
         //--------------ASSIGNMENT 9 BEGINING-----------//
         // Hasta el byte 19 quiero asegurarme que tiene los :
         if(strncmp(ptr,"AESDCHAR_IOCSEEKTO:", 19)==0){
             printf("Command AESDCHAR_IOCSEEKTO detected\n");
-            syslog(LOG_INFO, "Detected AESDCHAR_IOCSEEKTO command");
-            fptr = fopen(FILE_NAME, "r+"); 
-            int fd = fileno(fptr);
+            syslog(LOG_INFO, "Detected AESDCHAR_IOCSEEKTO command %s",ptr);
+
+            /*Remmenber NEVER use fopen() and its friends when USE ioctl(), poll(), select()
+            */
+            int fd = open(FILE_NAME, O_RDWR);
+
+            if (fd < 0) {
+                syslog(LOG_ERR, "open() failed: %s", strerror(errno));
+                free(ptr);
+                pthread_mutex_unlock(&log_mutex);
+                break;
+            }
 
             if(sscanf(ptr,"AESDCHAR_IOCSEEKTO:%u,%u",&write_wd,&write_offset)==2){
                 seekto.write_cmd = write_wd;
                 seekto.write_cmd_offset = write_offset;
-                printf("write_wd %u write_cmd_offset %u \n",seekto.write_cmd , seekto.write_cmd_offset);
-            }
-            if(ioctl(fd,AESDCHAR_IOCSEEKTO,&seekto)<0){
-                syslog(LOG_ERR,"ioctl AESDCHAR_IOCSEEKTO %s",strerror(errno));    
-
+                //printf("write_wd %u write_cmd_offset %u \n",seekto.write_cmd , seekto.write_cmd_offset);
+                syslog(LOG_INFO, "Detected AESDCHAR_IOCSEEKTO command write_wd %u write_cmd_offset %u \n",seekto.write_cmd , seekto.write_cmd_offset);
             }else{
-                //Read since the given position
-                char file_buf[MAXBUFLEN]={0};
-                int read_bytes = 0;
-                read_bytes = fread(file_buf,sizeof(char),numbytes,fptr);
-
-                if (read_bytes > 0){
-                    if(send(thread_func_args->new_fd,file_buf,read_bytes,0)<0){
-                        syslog(LOG_ERR,"Send failed %s",strerror(errno));
-                    }
-                    if(pthread_mutex_unlock(&log_mutex) != 0){
-                    perror("Unable to unlock pthread_mutex");
-                    }else{
-                        printf("OUT MUTEXT 2\n");
-                        syslog(LOG_INFO,"OUT MUTEXT 2\n"); //Just for my control
-                    }
-                }else{
-                    syslog(LOG_ERR, "Read failed after ioctl: %s", strerror(errno));
-                }
-
-               
+                syslog(LOG_ERR,"ioctl AESDCHAR_IOCSEEKTO %s",strerror(errno));
+                printf("No se puedo ejecutar sscanf\n");
+                close(fd);
+                free(ptr);
+                pthread_mutex_unlock(&log_mutex);
+                break;
             }
-        free(ptr);   
-        printf("Salida ioctl()\n");
-        fclose(fptr);
+
+            if(ioctl(fd,AESDCHAR_IOCSEEKTO,&seekto)<0){
+                syslog(LOG_ERR,"ioctl ERROR AESDCHAR_IOCSEEKTO %s",strerror(errno));
+                printf("No se puedo ejecutar ioctl\n");
+                close(fd);
+                free(ptr);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+                pthread_mutex_unlock(&log_mutex);
+                break;
+            }else{
+                 // 🔧 Re-sincronizar el FILE* con el fd actualizado
+                //fseek(fptr, 0, SEEK_CUR);
+                //Read since the given position
+                printf("ioctl enviados y listo para el nuevo filp->f_pos\n");
+                char file_buf[MAXBUFLEN]={0};
+                ssize_t read_bytes ;
+                //Control de posición
+                     
+                while ((read_bytes = read(fd,file_buf,sizeof(file_buf))) > 0) {
+                    //printf("WHILE read_bytes # %lu\n",read_bytes);
+                    //printf("dentro de read_bytes Lectura nueva posición\n");
+                    if(send(thread_func_args->new_fd,file_buf,read_bytes,0 )< 0){
+                        syslog(LOG_ERR,"Send failed %s",strerror(errno));
+                        //printf("Faild sending buffer AESDCHAR_IOCSEEKTO\n");
+                    }
+                    // if(pthread_mutex_unlock(&log_mutex) != 0){
+                    // perror("Unable to unlock pthread_mutex");
+                    // }else{
+                    //     //printf("Ioctl OUT MUTEXT \n");
+                    //     syslog(LOG_INFO,"Ioctl OUT MUTEXT 2\n"); //Just for my control
+                    // }
+                }
+                if(pthread_mutex_unlock(&log_mutex) != 0){
+                    perror("Unable to unlock pthread_mutex");
+                }else{
+                   //printf("Ioctl OUT MUTEXT \n");
+                   syslog(LOG_INFO,"Ioctl OUT MUTEXT 2\n"); //Just for my control
+                }
+                free(ptr);   
+                printf("Salida WHILE lectura ioctl()\n");
+                close(fd);
+            }
+        //free(ptr);   
+        //printf("Salida ioctl()\n");
+        //fclose(fptr);
+        pthread_mutex_unlock(&log_mutex);
         //--------------ASSIGNMENT 9 FINISH-----------//
         }else{
-            fptr = fopen(FILE_NAME, "w+"); 
+            printf("OPTION 2 no AESDCHAR_IOCSEEKTO: =) 2\n");
+
+            fptr = fopen(FILE_NAME, "r+"); 
    
             if (fptr != NULL){
                 syslog(LOG_INFO, "Correctly entered arguments");
                 
             }else{
-                syslog(LOG_ERR,"Missing Filename and Text");        
+                syslog(LOG_ERR,"Missing Filename and Text %s\n", strerror(errno));        
             }
         
             if( fwrite (ptr,sizeof(char),numbytes,fptr) < numbytes){
@@ -357,7 +394,7 @@ void *parnert_handler(void *thread_param){
                 syslog(LOG_INFO,"Inside ptr\n");
 
                 char file_buf[MAXBUFLEN]={0};
-                int read_bytes;
+                int read_bytes=0;
 
                 fptr = fopen(FILE_NAME, "r+"); 
 
@@ -370,18 +407,19 @@ void *parnert_handler(void *thread_param){
                     }
                 }
                 //Aquí empezar a escribir los datos nuevos.
-
+                
                 while ((read_bytes = fread(file_buf, sizeof(char), numbytes,fptr)) > 0) {
-                    syslog(LOG_INFO,"Read bytes\n");
+                    //printf("read_bytes # %u\n",read_bytes);
+                    syslog(LOG_INFO,"Read bytes %u",read_bytes);
 
                     if (send(thread_func_args->new_fd, file_buf,read_bytes, 0) < 0){
-                        syslog(LOG_ERR,"Send action failed");
+                        syslog(LOG_ERR,"Send action failed %s",strerror(errno));
                         break;
                     } 
                     if(pthread_mutex_unlock(&log_mutex) != 0){
                         perror("Unable to unlock pthread_mutex");
                     }else{
-                        printf("OUT MUTEXT 2\n");
+                        //printf("OUT MUTEXT 2\n");
                         syslog(LOG_INFO,"OUT MUTEXT 2\n"); //Just for my control
                     }
                 }
@@ -539,7 +577,7 @@ int main (int argc, char *argv[]){
 
     while(bool_pthread){
 
-        printf("Bool_pthread stated %d\n", bool_pthread);
+        printf("Bool_pthread stated %d \n", bool_pthread);
         //accepting an incoming connection:
         addr_size = sizeof their_addr;
         new_fd = accept(sockett, (struct sockaddr *)&their_addr,(socklen_t *)&addr_size);
