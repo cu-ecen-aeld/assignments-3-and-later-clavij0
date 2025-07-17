@@ -237,7 +237,7 @@ void *parnert_handler(void *thread_param){
     char buf[1024] = {0};
     int numbytes=0;   
     char *ptr = NULL;
-    FILE * fptr;
+    //FILE * fptr;
 
     unsigned int write_wd;
     unsigned int write_offset;
@@ -296,6 +296,8 @@ void *parnert_handler(void *thread_param){
             printf("Command AESDCHAR_IOCSEEKTO detected\n");
             syslog(LOG_INFO, "Detected AESDCHAR_IOCSEEKTO command %s",ptr);
 
+            //fptr = fopen(FILE_NAME, "r+"); 
+            //int fd = fileno(fptr);
             /*Remmenber NEVER use fopen() and its friends when USE ioctl(), poll(), select()
             */
             int fd = open(FILE_NAME, O_RDWR);
@@ -310,11 +312,12 @@ void *parnert_handler(void *thread_param){
             if(sscanf(ptr,"AESDCHAR_IOCSEEKTO:%u,%u",&write_wd,&write_offset)==2){
                 seekto.write_cmd = write_wd;
                 seekto.write_cmd_offset = write_offset;
-                //printf("write_wd %u write_cmd_offset %u \n",seekto.write_cmd , seekto.write_cmd_offset);
+                printf("write_wd %u write_cmd_offset %u \n",seekto.write_cmd , seekto.write_cmd_offset);
                 syslog(LOG_INFO, "Detected AESDCHAR_IOCSEEKTO command write_wd %u write_cmd_offset %u \n",seekto.write_cmd , seekto.write_cmd_offset);
             }else{
                 syslog(LOG_ERR,"ioctl AESDCHAR_IOCSEEKTO %s",strerror(errno));
                 printf("No se puedo ejecutar sscanf\n");
+                //fclose(fptr);
                 close(fd);
                 free(ptr);
                 pthread_mutex_unlock(&log_mutex);
@@ -324,8 +327,9 @@ void *parnert_handler(void *thread_param){
             if(ioctl(fd,AESDCHAR_IOCSEEKTO,&seekto)<0){
                 syslog(LOG_ERR,"ioctl ERROR AESDCHAR_IOCSEEKTO %s",strerror(errno));
                 printf("No se puedo ejecutar ioctl\n");
+                //fclose(fptr);
                 close(fd);
-                free(ptr);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+                free(ptr);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
                 pthread_mutex_unlock(&log_mutex);
                 break;
             }else{
@@ -336,80 +340,130 @@ void *parnert_handler(void *thread_param){
                 char file_buf[MAXBUFLEN]={0};
                 ssize_t read_bytes ;
                 //Control de posición
-                     
+                //long pos = ftell(fptr);
+
+                //printf("1 Nueva posición del archivo tras ioctl: %ld\n", ftell(fptr));
+
+                //char preview_buf[1024] = {0};
+                // Leer una pequeña porción para depurar/verificar
+                //size_t preview_bytes = fread(preview_buf, sizeof(char), sizeof(preview_buf) - 1, fptr);
+
+                //printf("Preview antes del bucle: [%s] (%zu bytes)\n", preview_buf, preview_bytes);
+
+                // IMPORTANTE: regresar el cursor al punto original antes del bucle
+                //fseek(fptr, -((long)preview_bytes), SEEK_CUR);
+                
+                //printf("read_bytes # %lu\n",read_bytes);             
+                //read_bytes = fread(file_buf,sizeof(char),numbytes,fptr);
+                //printf("read_bytes # %lu\n",read_bytes);
+                //read_bytes =0;
+                //printf("read_bytes # %lu\n",read_bytes);
+                //OJO aquí
+                //if (read_bytes > 0){
+                //if ((read_bytes = fread(file_buf, sizeof(char), sizeof(numbytes),fptr)) > 0){
+                //while ((read_bytes = read(file_buf, sizeof(char), sizeof(numbytes),fd)) > 0) {
                 while ((read_bytes = read(fd,file_buf,sizeof(file_buf))) > 0) {
-                    //printf("WHILE read_bytes # %lu\n",read_bytes);
-                    //printf("dentro de read_bytes Lectura nueva posición\n");
+                    printf("WHILE read_bytes # %lu\n",read_bytes);
+                    printf("dentro de read_bytes Lectura nueva posición\n");
                     if(send(thread_func_args->new_fd,file_buf,read_bytes,0 )< 0){
                         syslog(LOG_ERR,"Send failed %s",strerror(errno));
-                        //printf("Faild sending buffer AESDCHAR_IOCSEEKTO\n");
+                        printf("Faild sending buffer AESDCHAR_IOCSEEKTO\n");
                     }
-                    // if(pthread_mutex_unlock(&log_mutex) != 0){
-                    // perror("Unable to unlock pthread_mutex");
-                    // }else{
-                    //     //printf("Ioctl OUT MUTEXT \n");
-                    //     syslog(LOG_INFO,"Ioctl OUT MUTEXT 2\n"); //Just for my control
-                    // }
-                }
-                if(pthread_mutex_unlock(&log_mutex) != 0){
+                    if(pthread_mutex_unlock(&log_mutex) != 0){
                     perror("Unable to unlock pthread_mutex");
-                }else{
-                   //printf("Ioctl OUT MUTEXT \n");
-                   syslog(LOG_INFO,"Ioctl OUT MUTEXT 2\n"); //Just for my control
-                }
+                    }else{
+                        printf("Ioctl OUT MUTEXT \n");
+                        syslog(LOG_INFO,"Ioctl OUT MUTEXT 2\n"); //Just for my control
+                    }
+                }/*else{
+                    printf("Error read_bytes failed after ioctl \n");
+                    syslog(LOG_ERR, "Read failed after ioctl: %s", strerror(errno));
+                }*/
+
                 free(ptr);   
                 printf("Salida WHILE lectura ioctl()\n");
+                //fclose(fptr);
                 close(fd);
             }
         //free(ptr);   
         //printf("Salida ioctl()\n");
         //fclose(fptr);
-        pthread_mutex_unlock(&log_mutex);
+        //pthread_mutex_unlock(&log_mutex);
         //--------------ASSIGNMENT 9 FINISH-----------//
         }else{
             printf("OPTION 2 no AESDCHAR_IOCSEEKTO: =) 2\n");
 
-            fptr = fopen(FILE_NAME, "r+"); 
+            // fptr = fopen(FILE_NAME, "r+"); 
    
-            if (fptr != NULL){
-                syslog(LOG_INFO, "Correctly entered arguments");
+            // if (fptr != NULL){
+            //     syslog(LOG_INFO, "Correctly entered arguments");
                 
+            // }else{
+            //     syslog(LOG_ERR,"Missing Filename and Text %s\n", strerror(errno));        
+            // }
+            // if( fwrite (ptr,sizeof(char),numbytes,fptr) < numbytes){
+            //     syslog(LOG_ERR,"Could not write into FD %s\n", strerror(errno));
+            // }
+    
+            
+            // if (fclose(fptr) == EOF){
+            //     syslog(LOG_ERR,"Error Closing FD\n");
+            // }else{
+            //     syslog(LOG_INFO,"Success clossing\n");
+            // }
+
+            //char file_buf[MAXBUFLEN]={0};
+            ssize_t write_bytes ;
+            int fd = open(FILE_NAME, O_RDWR | O_CREAT | O_APPEND, 0644);
+
+            if(fd < 0){
+                syslog(LOG_ERR,"File opened failed %s",strerror(errno));
+                return NULL;
             }else{
-                syslog(LOG_ERR,"Missing Filename and Text %s\n", strerror(errno));        
-            }
-        
-            if( fwrite (ptr,sizeof(char),numbytes,fptr) < numbytes){
-                syslog(LOG_ERR,"Could not write into FD %s\n", strerror(errno));
+                  syslog(LOG_INFO, "Correctly File opened for writing");
             }
 
             //printf("Written to file: %s\n", ptr);
-            
-            if (fclose(fptr) == EOF){
-                syslog(LOG_ERR,"Error Closing FD\n");
+            if( (write_bytes = write(fd,ptr,numbytes)) < 0){
+                syslog(LOG_ERR,"Could not write into FD %s\n", strerror(errno));
+            }else if (sizeof(write_bytes)< numbytes){
+                syslog(LOG_ERR,"Parcial write commands %zd of %d bytes \n",write_bytes,numbytes);
+            }
+
+            if (close(fd)== -1){
+                syslog(LOG_ERR,"Error Closing FD %s\n",strerror(errno));
             }else{
                 syslog(LOG_INFO,"Success clossing\n");
             }
-
+        
             if(strchr(ptr,'\n')){
                 syslog(LOG_INFO,"Inside ptr\n");
 
                 char file_buf[MAXBUFLEN]={0};
                 int read_bytes=0;
 
-                fptr = fopen(FILE_NAME, "r+"); 
+                // fptr = fopen(FILE_NAME, "r+"); 
 
-                if (!fptr) {
-                syslog(LOG_ERR,"File is not opened %s",strerror(errno));
-                fptr = fopen(FILE_NAME, "a+");
-                    if (!fptr) {
-                        perror("Failed to open file");
-                        exit(EXIT_FAILURE);
-                    }
+                // if (!fptr) {
+                // syslog(LOG_ERR,"File is not opened %s",strerror(errno));
+                // fptr = fopen(FILE_NAME, "a+");
+                //     if (!fptr) {
+                //         perror("Failed to open file");
+                //         exit(EXIT_FAILURE);
+                //     }
+                // }
+                int fd = open(FILE_NAME,O_RDWR | O_APPEND);
+                if (fd < 0) {
+                    syslog(LOG_ERR, "open() failed: %s", strerror(errno));
+                    free(ptr);
+                    pthread_mutex_unlock(&log_mutex);
+                    break;
                 }
                 //Aquí empezar a escribir los datos nuevos.
                 
-                while ((read_bytes = fread(file_buf, sizeof(char), numbytes,fptr)) > 0) {
-                    //printf("read_bytes # %u\n",read_bytes);
+                //while ((read_bytes = fread(file_buf, sizeof(char), numbytes,fptr)) > 0) {
+                while ((read_bytes = read(fd,file_buf,sizeof(file_buf))) > 0) {
+                    printf("read_bytes # %u\n",read_bytes);
                     syslog(LOG_INFO,"Read bytes %u",read_bytes);
 
                     if (send(thread_func_args->new_fd, file_buf,read_bytes, 0) < 0){
@@ -419,14 +473,15 @@ void *parnert_handler(void *thread_param){
                     if(pthread_mutex_unlock(&log_mutex) != 0){
                         perror("Unable to unlock pthread_mutex");
                     }else{
-                        //printf("OUT MUTEXT 2\n");
+                        printf("OUT MUTEXT 2\n");
                         syslog(LOG_INFO,"OUT MUTEXT 2\n"); //Just for my control
                     }
                 }
 
                 free(ptr);   
                 printf("Salida 1\n");
-                fclose(fptr);
+                //fclose(fptr);
+                close(fd);
             }else{
                 printf("Detected long_file.txt\n");
                 pthread_mutex_unlock(&log_mutex);
@@ -450,7 +505,7 @@ void *parnert_handler(void *thread_param){
 
 int main (int argc, char *argv[]){
     
-    int daemon_mode = 1;
+    int daemon_mode = 0;
 
     // Parse command line arguments
     if (argc == 2 && strcmp(argv[1], "-d") == 0) {

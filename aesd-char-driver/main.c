@@ -80,7 +80,6 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     struct aesd_buffer_entry *entry = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->cir_buff, *f_pos, &entry_offset);
 
    	//mutex_unlock(&dev->lock);
-
     if (entry != NULL){
 		// unread_bytes = entry->size - entry_offset;
         // printk(KERN_INFO "unread_bytes: %zu\n", unread_bytes);
@@ -88,20 +87,18 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
         // printk(KERN_INFO "entry->size: %zu\n", entry->size);
         // printk(KERN_INFO "entry_offset: %zu\n", entry_offset);
 
-        bytes_to_copy = min(entry->size - entry_offset, count);
-        
-        PDEBUG ("Current 2 Post %lld, entry_offset %zu \n",current_pos, entry_offset);
-        //printk(KERN_INFO "bytes_to_copy: %zu\n", bytes_to_copy);
-        //printk(KERN_INFO "count: %zu\n", count);
-        
-        //Validar entry->buffptr no sea NULL
-        if (entry->buffptr == NULL) {
+        if(!entry->buffptr){
             PDEBUG("entry->buffptr is NULL");
             return -EFAULT;
         }
+        bytes_to_copy = min(entry->size - entry_offset, count);
+        
+        PDEBUG ("Current 2 Post %lld, entry_offset %zu \n",current_pos, entry_offset);
+        printk(KERN_INFO "bytes_to_copy: %zu\n", bytes_to_copy);
+        printk(KERN_INFO "count: %zu\n", count);
 
 
-		//PDEBUG("Reading message %.*s of size %zu", bytes_to_copy, entry->buffptr + entry_offset, bytes_to_copy);
+		PDEBUG("Reading message %.*s of size %zu", bytes_to_copy, entry->buffptr + entry_offset, bytes_to_copy);
 		if (copy_to_user(buf, entry->buffptr + entry_offset, bytes_to_copy)){
             mutex_unlock(&dev->lock);
 			return -EINTR;
@@ -109,8 +106,10 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
         // *f_pos += bytes_to_copy; update the pointer position for the next reading
 		*f_pos += bytes_to_copy;
 		retval = bytes_to_copy;
+        mutex_unlock(&dev->lock);
 	}else{
         PDEBUG("NO DATA TO READ");
+        //mutex_unlock(&dev->lock);
     }
 
 
@@ -145,17 +144,27 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     // Allocate a kernel buffer to store the data
     //dev->buffer_entry.buffptr=kmalloc(count*sizeof(char *),GFP_KERNEL);
 
-	dev->buffer_entry.buffptr = krealloc(dev->buffer_entry.buffptr,dev->buffer_entry.size + count,GFP_KERNEL);
+	// dev->buffer_entry.buffptr = krealloc(dev->buffer_entry.buffptr,dev->buffer_entry.size + count,GFP_KERNEL);
 
 
-    if(!dev->buffer_entry.buffptr){
+    // if(!dev->buffer_entry.buffptr){
+    //     PDEBUG("No longer needed");
+    //     kfree(dev->buffer_entry.buffptr);
+    //     dev->buffer_entry.buffptr = NULL;
+    //     dev->buffer_entry.size = 0;
+    //     goto out;
+    // }
+    
+    char *tmp = krealloc(dev->buffer_entry.buffptr,dev->buffer_entry.size + count,GFP_KERNEL);
+    if(!tmp){
         PDEBUG("No longer needed");
         kfree(dev->buffer_entry.buffptr);
         dev->buffer_entry.buffptr = NULL;
         dev->buffer_entry.size = 0;
+        retval = -ENOMEM;
         goto out;
     }
- 
+    dev->buffer_entry.buffptr = tmp;
 
     if (copy_from_user(dev->buffer_entry.buffptr + dev->buffer_entry.size,buf,count)){
         PDEBUG("Failed allocating ");
@@ -210,8 +219,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 
         if (remove_strchr  != NULL){
             
-            //PDEBUG("Remove entry : %.*s",dev->buffer_entry.size,remove_strchr );
-            //PDEBUG("Data Removed size : %zu", dev->buffer_entry.size);
+            PDEBUG("Remove entry : %.*s",dev->buffer_entry.size,remove_strchr );
+            PDEBUG("Data Removed size : %zu", dev->buffer_entry.size);
             
 			kfree(remove_strchr);
 		}	
