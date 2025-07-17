@@ -292,8 +292,11 @@ void *parnert_handler(void *thread_param){
 
         //--------------ASSIGNMENT 9 BEGINING-----------//
         // Hasta el byte 19 quiero asegurarme que tiene los :
+        int cmp = strncmp(ptr,"AESDCHAR_IOCSEEKTO:", 19);
+        syslog(LOG_INFO, "Detected AESDCHAR_IOCSEEKTO command %u",cmp);
         if(strncmp(ptr,"AESDCHAR_IOCSEEKTO:", 19)==0){
             printf("Command AESDCHAR_IOCSEEKTO detected\n");
+            
             syslog(LOG_INFO, "Detected AESDCHAR_IOCSEEKTO command %s",ptr);
 
             //fptr = fopen(FILE_NAME, "r+"); 
