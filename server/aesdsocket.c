@@ -293,7 +293,7 @@ void *parnert_handler(void *thread_param){
         //--------------ASSIGNMENT 9 BEGINING-----------//
         // Hasta el byte 19 quiero asegurarme que tiene los :
         int cmp = strncmp(ptr,"AESDCHAR_IOCSEEKTO:", 19);
-        syslog(LOG_INFO, "Detected AESDCHAR_IOCSEEKTO command %u",cmp);
+        syslog(LOG_INFO, "compera cmp  %d",cmp);
         if(strncmp(ptr,"AESDCHAR_IOCSEEKTO:", 19)==0){
             printf("Command AESDCHAR_IOCSEEKTO detected\n");
             
@@ -394,8 +394,9 @@ void *parnert_handler(void *thread_param){
         //pthread_mutex_unlock(&log_mutex);
         //--------------ASSIGNMENT 9 FINISH-----------//
         }else{
-            printf("OPTION 2 no AESDCHAR_IOCSEEKTO: =) 2\n");
-
+            syslog(LOG_INFO,"OPTION 2 no AESDCHAR_IOCSEEKTO: =) 2\n");
+            int cmp = strncmp(ptr,"AESDCHAR_IOCSEEKTO:", 19);
+            syslog(LOG_INFO, "compera cmp  %d",cmp);
             // fptr = fopen(FILE_NAME, "r+"); 
    
             // if (fptr != NULL){
@@ -436,7 +437,7 @@ void *parnert_handler(void *thread_param){
             if (close(fd)== -1){
                 syslog(LOG_ERR,"Error Closing FD %s\n",strerror(errno));
             }else{
-                syslog(LOG_INFO,"Success clossing\n");
+                syslog(LOG_INFO,"Success clossing TOR\n");
             }
         
             if(strchr(ptr,'\n')){
