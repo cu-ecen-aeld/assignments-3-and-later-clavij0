@@ -20,9 +20,14 @@
 #include <linux/slab.h>
 #include <linux/fs.h> // file_operations
 #include <linux/uaccess.h>	/* copy_*_user */
+#include <linux/compat.h>
 
 #include "aesdchar.h"
 #include "aesd_ioctl.h"
+
+#ifdef CONFIG_COMPAT
+    .compat_ioctl = compat_ptr_ioctl,
+#endif
 
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
@@ -406,6 +411,10 @@ struct file_operations aesd_fops = {
     .release =  aesd_release,
     .llseek =   aesd_llseek, // Assigment 9
     .unlocked_ioctl = aesd_ioctl, // Assigment 9
+
+// #ifdef CONFIG_COMPAT
+//     .compat_ioctl = compat_ptr_ioctl,
+// #endif
 };
 
 static int aesd_setup_cdev(struct aesd_dev *dev)

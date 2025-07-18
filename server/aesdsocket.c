@@ -477,8 +477,8 @@ void *parnert_handler(void *thread_param){
                     if(pthread_mutex_unlock(&log_mutex) != 0){
                         perror("Unable to unlock pthread_mutex");
                     }else{
-                        printf("OUT MUTEXT 2\n");
-                        syslog(LOG_INFO,"OUT MUTEXT 2\n"); //Just for my control
+                        printf("OUT MUTEXT 2 .1\n");
+                        syslog(LOG_INFO,"OUT MUTEXT 2 .2\n"); //Just for my control
                     }
                 }
 
